@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# PLAYBOOK: storage_ibm_health_capacity.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: IBM FlashSystem, SVC
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM FlashSystem / SVC Health, Capacity, and Flash Wear Audit
+  hosts: ibm_storage:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/ibm.yml
+
+  vars:
+    ibm_storage_host: "{{ ansible_host | default('10.100.80.11') }}"
+    ibm_storage_user: "{{ storage_user | default('superuser') }}"
+
+  tasks:
+    - name: 1. Query System Alarms and Alert Events (lsalertlog)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ ibm_storage_cli_port }} {{ ibm_storage_user }}@{{ ibm_storage_host }} lsalertlog -delim :"
+      register: ibm_alerts
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Flash Core Module Wear and Endurance Metrics (lsdrive)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ ibm_storage_cli_port }} {{ ibm_storage_user }}@{{ ibm_storage_host }} lsdrive -delim :"
+      register: ibm_drives
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Storage Pool Capacities (lsmdiskgrp)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ ibm_storage_cli_port }} {{ ibm_storage_user }}@{{ ibm_storage_host }} lsmdiskgrp -delim :"
+      register: ibm_pools
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save IBM Health and Capacity Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM FLASHSYSTEM HEALTH & CAPACITY AUDIT: {{ inventory_hostname }} ===
+          
+          --- ACTIVE SYSTEM ALARMS (lsalertlog) ---
+          {{ ibm_alerts.stdout | default('No active hardware alarms logged') }}
+          
+          --- FLASH CORE DRIVES & WEAR METRICS (lsdrive) ---
+          {{ ibm_drives.stdout | default('Drive telemetry unavailable') }}
+          
+          --- POOL CAPACITY AND FREE EXTENTS ---
+          {{ ibm_pools.stdout | default('Pool capacity query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/ibm_health_capacity.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display IBM Storage Health Status
+      ansible.builtin.debug:
+        msg: "IBM Storage health and capacity audit complete for {{ inventory_hostname }}."

@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX ZOMBIE & DEFUNCT PROCESS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / PERFORMANCE_DIAGNOSTICS
+# Scope: 'Z' state processes, PPID identification, /proc/sys/kernel/pid_max, PID leak
+# ==============================================================================
+
+- name: Enterprise Linux Zombie & Defunct Process Analysis
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Performance Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Scan for Defunct / Zombie Processes (State Z)"
+      ansible.builtin.shell: |
+        ps -eo stat,pid,ppid,user,args | awk '$1 ~ /^Z/ {print $0}' || true
+      register: zombie_processes
+      changed_when: false
+
+    - name: "3. Identify Parent Processes Spawning Zombie Children"
+      ansible.builtin.shell: |
+        zombie_ppids=$(ps -eo stat,ppid | awk '$1 ~ /^Z/ {print $2}' | sort -u)
+        if [ -n "$zombie_ppids" ]; then
+          for ppid in $zombie_ppids; do
+            echo "--- Parent Process (PPID: $ppid) ---"
+            ps -fp "$ppid" || echo "PPID $ppid has reparented to init/systemd"
+          done
+        else
+          echo "Zero zombie parent processes detected."
+        fi
+      register: zombie_parents
+      changed_when: false
+
+    - name: "4. Audit System-wide PID Capacity and Consumption"
+      ansible.builtin.shell: |
+        max_pids=$(cat /proc/sys/kernel/pid_max)
+        current_pids=$(ps -ef | wc -l)
+        threads=$(cat /proc/sys/kernel/threads-max)
+        echo "Current PIDs Active : $current_pids"
+        echo "Kernel PID Max      : $max_pids"
+        echo "Kernel Threads Max  : $threads"
+      register: pid_limits
+      changed_when: false
+
+    - name: "5. Detect Processes in Uninterruptible Sleep (State D)"
+      ansible.builtin.shell: |
+        ps -eo stat,pid,ppid,wchan:20,comm | awk '$1 ~ /^D/ {print $0}' || true
+      register: d_state_processes
+      changed_when: false
+
+    - name: "6. Save Process Health Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX ZOMBIE & DEFUNCT PROCESS ANALYSIS REPORT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. ACTIVE ZOMBIE PROCESSES ---
+          {{ zombie_processes.stdout if zombie_processes.stdout != "" else "No zombie processes found." }}
+
+          --- 2. PARENT PROCESSES OF ZOMBIE WORKERS ---
+          {{ zombie_parents.stdout }}
+
+          --- 3. SYSTEM PID & THREAD CAPACITY ---
+          {{ pid_limits.stdout }}
+
+          --- 4. UNINTERRUPTIBLE SLEEP (D-STATE) PROCESSES ---
+          {{ d_state_processes.stdout if d_state_processes.stdout != "" else "No D-state I/O blocked processes found." }}
+          ==============================================================================
+        dest: "{{ report_dir }}/zombie_process_analysis.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Zombie Process Status"
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Zombie Count: {{ zombie_processes.stdout_lines | length }}"
+          - "D-State Count: {{ d_state_processes.stdout_lines | length }}"
+          - "Report: {{ report_dir }}/zombie_process_analysis.txt"

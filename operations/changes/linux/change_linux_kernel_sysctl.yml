@@ -1,0 +1,88 @@
+---
+# ==============================================================================
+# CHANGE PLAYBOOK: LINUX KERNEL SYSCTL TUNING
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: MUTATING_CHANGE (Requires explicit confirmation)
+# Guard: confirm_change == true
+# Check Mode Support: FULL (--check / --diff supported)
+# ==============================================================================
+
+- name: Enterprise Linux Kernel Tunable Modification
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/linux.yml
+
+  vars:
+    change_id: "{{ chg_id | default('CHG0001') }}"
+    confirm_change: false
+    param_name: "{{ sysctl_key | default('vm.swappiness') }}"
+    param_value: "{{ sysctl_value | default('10') }}"
+    backup_file: "/tmp/sysctl_pre_{{ change_id }}_{{ param_name }}.txt"
+
+  pre_tasks:
+    - name: 1. Change Authorization & Safety Assertion
+      ansible.builtin.fail:
+        msg: >
+          CRITICAL ERROR: Change has NOT been confirmed!
+          This playbook modifies kernel configuration on production infrastructure.
+          To execute this change, you must explicitly supply: -e "confirm_change=true"
+          Alternatively, test this change using --check mode.
+      when: not (confirm_change | bool) and not ansible_check_mode
+
+    - name: 2. Capture Pre-Change Kernel Tunable State
+      ansible.builtin.shell: |
+        sysctl "{{ param_name }}" > "{{ backup_file }}"
+      changed_when: false
+
+    - name: 3. Display Pre-Change Value
+      ansible.builtin.command: cat "{{ backup_file }}"
+      register: pre_state
+      changed_when: false
+
+    - name: 4. Log Pre-Change Baseline
+      ansible.builtin.debug:
+        msg: "Pre-change {{ param_name }} value: {{ pre_state.stdout }}"
+
+  tasks:
+    - name: 5. Apply Sysctl Kernel Tunable (Permanent & Runtime)
+      ansible.posix.sysctl:
+        name: "{{ param_name }}"
+        value: "{{ param_value }}"
+        state: present
+        reload: true
+        sysctl_set: true
+      register: sysctl_result
+
+  post_tasks:
+    - name: "6. Post-Change Verification: Query Live Running Kernel"
+      ansible.builtin.command: sysctl -n "{{ param_name }}"
+      register: post_state
+      changed_when: false
+
+    - name: 7. Validate Applied Value Matches Requested Value
+      ansible.builtin.assert:
+        that:
+          - post_state.stdout == param_value
+        fail_msg: "Post-change verification failed! Expected {{ param_value }} but live kernel has {{ post_state.stdout }}"
+        success_msg: "Post-change verification SUCCESS: {{ param_name }} is active with value {{ post_state.stdout }}"
+      when: not ansible_check_mode
+
+    - name: 8. Record Change Completion Record on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          CHANGE EXECUTION RECORD: {{ change_id }}
+          ==============================================================================
+          Host Target        : {{ inventory_hostname }}
+          Tunable Applied    : {{ param_name }} = {{ param_value }}
+          Pre-Change Value   : {{ pre_state.stdout }}
+          Post-Change Value  : {{ post_state.stdout }}
+          Change Status      : SUCCESS
+          Execution Mode     : {% if ansible_check_mode %}CHECK_MODE (DRY-RUN){% else %}COMMITTED{% endif %}
+          ==============================================================================
+        dest: "{{ playbook_dir }}/../../../reports/changes/change_record_{{ change_id }}_{{ inventory_hostname }}.txt"
+        mode: '0644'
+      delegate_to: localhost

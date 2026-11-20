@@ -1,0 +1,7 @@
+# ==============================================================================
+# DELL POWERSTORE / POWERMAX STORAGE VARIABLES
+# ==============================================================================
+dell_powerstore_rest_port: 443
+dell_storage_pool_warning_percent: 80
+dell_storage_pool_critical_percent: 90
+dell_appliance_node_alert: true

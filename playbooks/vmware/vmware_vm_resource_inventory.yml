@@ -1,0 +1,65 @@
+---
+# ==============================================================================
+# PLAYBOOK: vmware_vm_resource_inventory.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported Platforms: VMware vSphere 6.7, 7.0, 8.0
+# Verified Modules (FQCN):
+#   - community.vmware.vmware_vm_info
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: VMware Virtual Machine Compute Resource and VMware Tools Audit
+  hosts: vmware_vcenter:mock_vmware
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/vmware.yml
+
+  vars:
+    vcenter_hostname: "{{ vcenter_host | default('vcenter.corp.internal') }}"
+    vcenter_username: "{{ vcenter_user | default('administrator@vsphere.local') }}"
+    vcenter_password: "{{ vcenter_pass | default('VMware@123') }}"
+
+  tasks:
+    - name: 1. Query Virtual Machine Specifications and Tools Status
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: vm_specs_raw
+      ignore_errors: true
+
+    - name: 2. Ensure Controller Performance Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 3. Save VM Resource Telemetry Artifact
+      ansible.builtin.copy:
+        content: |
+          === VMWARE VM RESOURCE & TOOLS AUDIT: {{ inventory_hostname }} ===
+          
+          --- VIRTUAL MACHINE COMPUTE ALLOCATION ---
+          {% for vm in vm_specs_raw.virtual_machines | default([]) %}
+          VM Name: {{ vm.guest_name }}
+          - Power State: {{ vm.power_state }}
+          - vCPUs: {{ vm.num_cpu }}
+          - RAM (MB): {{ vm.memory_mb }}
+          - Guest OS: {{ vm.guest_fullname | default('N/A') }}
+          - IP Address: {{ vm.ip_address | default('N/A') }}
+          - ESXi Host: {{ vm.esxi_hostname | default('N/A') }}
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/vm_resource_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Display VM Resource Inventory Status
+      ansible.builtin.debug:
+        msg: "VM compute resource inventory complete for {{ inventory_hostname }}."

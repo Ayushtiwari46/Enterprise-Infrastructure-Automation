@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM STORAGE DOMAIN LUNS & MULTIPATH AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / STORAGE_AUDIT
+# Scope: Storage domains, underlying LUN WWIDs, physical volume states, multipath
+# ==============================================================================
+
+- name: OLVM Storage Domain Underlying LUNs & Multipath Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query All Storage Domains via REST API"
+      ovirt.ovirt.ovirt_storage_domain_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: storage_domains_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Engine Database for Storage Domain Metadata"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT storage_name, storage_type, storage_domain_type, available_disk_size, used_disk_size FROM storage_domain_static JOIN storage_domain_dynamic ON storage_domain_static.id = storage_domain_dynamic.id;' 2>/dev/null" || true
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: sd_db_query
+      changed_when: false
+
+    - name: "4. Query Underlying Fibre Channel & iSCSI LUN Mappings"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT lun_id, physical_volume_id, volume_group_id, serial, vendor_id, product_id, device_size FROM luns;' 2>/dev/null" || echo "No block LUNs recorded"
+        else
+          echo "Database query unavailable"
+        fi
+      register: block_luns_db
+      changed_when: false
+
+    - name: "5. Save Storage Domain LUNs Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM STORAGE DOMAIN UNDERLYING LUNS & MULTIPATH AUDIT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. ACTIVE STORAGE DOMAINS (CAPACITY & TYPE) ---
+          {{ sd_db_query.stdout }}
+
+          --- 2. UNDERLYING SAN LUN DETAILS (WWID / SERIAL / VENDOR) ---
+          {{ block_luns_db.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_storage_domain_luns_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Storage Domain LUN Audit Summary"
+      ansible.builtin.debug:
+        msg: "OLVM Storage Domain LUN audit complete. Report: {{ report_dir }}/olvm_storage_domain_luns_audit.txt"

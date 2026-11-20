@@ -1,0 +1,28 @@
+# ==============================================================================
+# GLOBAL INFRASTRUCTURE AUTOMATION VARIABLES
+# ==============================================================================
+# Universal settings, timeouts, output destinations, and safety defaults.
+# ==============================================================================
+
+# Directory Paths on Controller
+global_log_dir: "logs/execution"
+global_report_dir: "reports"
+global_case_output_dir: "case-output"
+global_temp_dir: "/tmp/infra-automation"
+
+# Execution Thresholds and Guardrails
+global_timeout_seconds: 60
+global_sar_days_default: 7
+global_log_size_limit_mb: 250
+global_sha256_verification_enabled: true
+global_evidence_compression_format: "tar.gz"
+
+# Operational Safety Flag
+# Any modifying playbook will check this variable.
+# It MUST be explicitly passed via CLI (-e "confirm_change=true") to execute changes.
+confirm_change: false
+dry_run_mode: false
+
+# Notification and Alert Webhooks (Optional)
+notification_enabled: false
+notification_webhook_url: ""

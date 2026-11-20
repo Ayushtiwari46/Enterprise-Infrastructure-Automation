@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM / OVIRT ENGINE SYSTEM HEALTH AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / VIRTUALIZATION_AUDIT
+# Scope: ovirt-engine systemd service, PostgreSQL database, log health, memory
+# ==============================================================================
+
+- name: OLVM Virtualization Engine System Health & Daemon Audit
+  hosts: olvm_engine
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Health Check Output Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Verify ovirt-engine Service Status"
+      ansible.builtin.shell: |
+        systemctl status ovirt-engine --no-pager 2>&1 || true
+      register: engine_service_status
+      changed_when: false
+
+    - name: "3. Verify ovirt-websocket-proxy & ovirt-imageio Services"
+      ansible.builtin.shell: |
+        systemctl is-active ovirt-websocket-proxy ovirt-imageio-proxy ovirt-engine-dwhd 2>/dev/null || true
+      register: auxiliary_services
+      changed_when: false
+
+    - name: "4. Audit PostgreSQL Engine Database Connectivity & Metrics"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT count(*) FROM vms;' 2>&1" || echo "Postgres direct query restricted"
+        else
+          echo "PostgreSQL CLI unavailable"
+        fi
+      register: postgres_engine_db
+      changed_when: false
+
+    - name: "5. Check OLVM Engine Log File for Errors (/var/log/ovirt-engine/engine.log)"
+      ansible.builtin.shell: |
+        if [ -f /var/log/ovirt-engine/engine.log ]; then
+          tail -n 250 /var/log/ovirt-engine/engine.log | grep -E "(ERROR|FATAL|Exception)" | tail -n 20 || echo "No critical errors in recent engine log."
+        else
+          echo "engine.log not found"
+        fi
+      register: engine_errors
+      changed_when: false
+
+    - name: "6. Check Engine Java Virtual Machine (JVM) Memory Usage"
+      ansible.builtin.shell: |
+        ps -eo user,pid,%cpu,%mem,vsz,rss,comm,args | grep "[o]virt-engine" | head -n 1
+      register: engine_jvm_process
+      changed_when: false
+
+    - name: "7. Save OLVM Engine System Health Audit on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM / OVIRT ENGINE SYSTEM HEALTH AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. OVIRT-ENGINE SERVICE STATUS ---
+          {{ engine_service_status.stdout }}
+
+          --- 2. AUXILIARY ENGINE SERVICES ---
+          {{ auxiliary_services.stdout }}
+
+          --- 3. ENGINE DATABASE HEALTH ---
+          {{ postgres_engine_db.stdout }}
+
+          --- 4. ENGINE JVM PROCESS RESOURCE ALLOCATION ---
+          {{ engine_jvm_process.stdout }}
+
+          --- 5. RECENT ENGINE.LOG EXCEPTION SCAN ---
+          {{ engine_errors.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_engine_system_health.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display OLVM Engine Health Summary"
+      ansible.builtin.debug:
+        msg: "OLVM Engine system health audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/olvm_engine_system_health.txt"

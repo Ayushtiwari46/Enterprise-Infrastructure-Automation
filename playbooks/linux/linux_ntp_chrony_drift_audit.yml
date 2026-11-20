@@ -1,0 +1,110 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX NTP & CHRONY CLOCK SYNCHRONIZATION AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / L3_DIAGNOSTICS
+# Scope: chrony sources, tracking, ntp peers, clock jitter, offset, stratum
+# ==============================================================================
+
+- name: Enterprise Linux Clock Synchronization & Drift Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query Timedatectl System Clock & RTC Status"
+      ansible.builtin.command: timedatectl status
+      register: timedatectl_status
+      changed_when: false
+
+    - name: "3. Audit Chrony Time Tracking and Offset (chronyc tracking)"
+      ansible.builtin.shell: |
+        if command -v chronyc >/dev/null 2>&1; then
+          chronyc tracking 2>&1
+        else
+          echo "chronyc not installed"
+        fi
+      register: chrony_tracking
+      changed_when: false
+
+    - name: "4. Audit Chrony Upstream NTP Sources (chronyc sources -v)"
+      ansible.builtin.shell: |
+        if command -v chronyc >/dev/null 2>&1; then
+          chronyc sources -v 2>&1
+        else
+          echo "chronyc not installed"
+        fi
+      register: chrony_sources
+      changed_when: false
+
+    - name: "5. Audit Chrony Sourcestats & Jitter (chronyc sourcestats -v)"
+      ansible.builtin.shell: |
+        if command -v chronyc >/dev/null 2>&1; then
+          chronyc sourcestats -v 2>&1
+        else
+          echo "chronyc not installed"
+        fi
+      register: chrony_sourcestats
+      changed_when: false
+
+    - name: "6. Check Traditional NTP Status (ntpq -p)"
+      ansible.builtin.shell: |
+        if command -v ntpq >/dev/null 2>&1; then
+          ntpq -p 2>&1
+        else
+          echo "ntpq not installed"
+        fi
+      register: ntpq_peers
+      changed_when: false
+
+    - name: "7. Save Clock Synchronization Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX CLOCK SYNCHRONIZATION & DRIFT AUDIT REPORT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. TIMEDATECTL CLOCK STATUS ---
+          {{ timedatectl_status.stdout }}
+
+          --- 2. CHRONYC TRACKING METRICS ---
+          {{ chrony_tracking.stdout }}
+
+          --- 3. CHRONYC UPSTREAM NTP SOURCES ---
+          {{ chrony_sources.stdout }}
+
+          --- 4. CHRONYC SOURCESTATS (JITTER & FREQUENCY) ---
+          {{ chrony_sourcestats.stdout }}
+
+          --- 5. TRADITIONAL NTP PEERS ---
+          {{ ntpq_peers.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/clock_sync_drift_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display Clock Sync Summary"
+      ansible.builtin.debug:
+        msg: "Clock synchronization audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/clock_sync_drift_audit.txt"

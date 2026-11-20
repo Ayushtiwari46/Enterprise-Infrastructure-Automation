@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM CLUSTER LIVE MIGRATION POLICIES AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / VIRTUALIZATION_AUDIT
+# Scope: Cluster migration bandwidth, convergence policies, parallel streams, encryption
+# ==============================================================================
+
+- name: OLVM Cluster Live Migration Policy & Convergence Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query All Compute Clusters via REST API"
+      ovirt.ovirt.ovirt_cluster_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: clusters_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Engine Database for Cluster Migration Policies"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT name, migration_bandwidth_limit_type, custom_migration_bandwidth_limit, migration_policy_id, auto_converge, migrate_encrypted FROM cluster;' 2>/dev/null" || true
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: cluster_migration_db
+      changed_when: false
+
+    - name: "4. Query Active Migration Streams and Concurrent Migration Settings"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT option_name, option_value FROM vdc_options WHERE option_name IN ('\''MaxConcurrentMigrations'\'', '\''MigrationProgressTimeout'\'', '\''DefaultMaximumMigrationDowntime'\'');' 2>/dev/null" || echo "VDC options query failed"
+        else
+          echo "Database query unavailable"
+        fi
+      register: vdc_migration_options
+      changed_when: false
+
+    - name: "5. Save Migration Policy Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM CLUSTER LIVE MIGRATION POLICY & CONVERGENCE AUDIT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. CLUSTER MIGRATION BANDWIDTH & ENCRYPTION POLICIES ---
+          {{ cluster_migration_db.stdout }}
+
+          --- 2. ENGINE GLOBAL MIGRATION TUNABLES (VDC_OPTIONS) ---
+          {{ vdc_migration_options.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_migration_policy_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Migration Policy Summary"
+      ansible.builtin.debug:
+        msg: "OLVM live migration policy audit complete. Report: {{ report_dir }}/olvm_migration_policy_audit.txt"

@@ -1,0 +1,98 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_system_log_collection.yml
+# ==============================================================================
+# Operational Category: Log Collection
+# Safety Classification: READ_ONLY
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.find
+#   - ansible.builtin.stat
+#   - ansible.builtin.fetch
+#   - ansible.builtin.file
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux System and Security Log Extraction
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    log_tail_lines: 1000
+    collect_journal: true
+
+  tasks:
+    - name: 1. Ensure Target Temporary Staging Directory Exists
+      ansible.builtin.file:
+        path: "/tmp/log_extract_{{ inventory_hostname }}"
+        state: directory
+        mode: '0700'
+
+    - name: 2. Extract Recent System Journal (Last 24 Hours)
+      ansible.builtin.command:
+        cmd: "journalctl --since '24 hours ago' -n {{ log_tail_lines }} --no-pager"
+      register: journal_extract
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Save Journal Extract to Staging
+      ansible.builtin.copy:
+        content: "{{ journal_extract.stdout }}"
+        dest: "/tmp/log_extract_{{ inventory_hostname }}/journal_recent.log"
+        mode: '0600'
+      when: journal_extract.rc == 0
+
+    - name: 4. Discover Existing Critical System Log Files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ linux_log_paths }}"
+      register: log_stat_results
+
+    - name: 5. Extract Tail of Discovered Log Files
+      ansible.builtin.command:
+        cmd: "tail -n {{ log_tail_lines }} {{ item.stat.path }}"
+      loop: "{{ log_stat_results.results | selectattr('stat.exists', 'equalto', true) | selectattr('stat.isreg', 'equalto', true) | list }}"
+      register: log_tail_results
+      changed_when: false
+
+    - name: 6. Write Extracted Logs to Staging
+      ansible.builtin.copy:
+        content: "{{ item.stdout }}"
+        dest: "/tmp/log_extract_{{ inventory_hostname }}/{{ item.item.stat.path | basename }}.tail"
+        mode: '0600'
+      loop: "{{ log_tail_results.results }}"
+
+    - name: 7. Ensure Controller Destination Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 8. Fetch Extracted Log Files to Controller
+      ansible.builtin.fetch:
+        src: "/tmp/log_extract_{{ inventory_hostname }}/{{ item.item.stat.path | basename }}.tail"
+        dest: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}/"
+        flat: true
+      loop: "{{ log_tail_results.results }}"
+
+    - name: 9. Fetch Journal Extract to Controller
+      ansible.builtin.fetch:
+        src: "/tmp/log_extract_{{ inventory_hostname }}/journal_recent.log"
+        dest: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}/"
+        flat: true
+      when: journal_extract.rc == 0
+
+    - name: 10. Clean Up Target Staging Directory
+      ansible.builtin.file:
+        path: "/tmp/log_extract_{{ inventory_hostname }}"
+        state: absent
+
+    - name: 11. Completion Message
+      ansible.builtin.debug:
+        msg: "Log extraction complete for {{ inventory_hostname }}. Preserved in reports/log-collection/{{ inventory_hostname }}/"

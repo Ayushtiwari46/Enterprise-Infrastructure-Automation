@@ -1,0 +1,96 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM QEMU GUEST AGENT (QEMU-GA) HEALTH AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / HYPERVISOR_DIAGNOSTICS
+# Scope: virsh qemu-agent-command, guest agent channel sockets, OS responsiveness
+# ==============================================================================
+
+- name: Enterprise KVM QEMU Guest Agent (QEMU-GA) Channel & Health Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. List Running Virtual Machines on KVM Hypervisor"
+      ansible.builtin.command: virsh list --state-running --name
+      register: running_vms
+      changed_when: false
+
+    - name: "3. Probe QEMU Guest Agent Communication for Running VMs"
+      ansible.builtin.shell: |
+        vms=$(virsh list --state-running --name)
+        if [ -z "$vms" ]; then
+          echo "No active running virtual machines on this hypervisor."
+        else
+          for vm in $vms; do
+            echo "=================================================="
+            echo "PROBING GUEST AGENT: $vm"
+            echo "=================================================="
+            if virsh qemu-agent-command "$vm" '{"execute":"guest-ping"}' 2>/dev/null; then
+              echo "[SUCCESS] Guest agent active and responding to ping."
+              echo "--- Guest OS Information ---"
+              virsh qemu-agent-command "$vm" '{"execute":"guest-info"}' 2>/dev/null || true
+              echo -e "\n--- Guest Network Interfaces ---"
+              virsh qemu-agent-command "$vm" '{"execute":"guest-network-get-interfaces"}' 2>/dev/null || true
+            else
+              echo "[WARNING] Guest agent unresponsive or channel not configured."
+            fi
+          done
+        fi
+      register: qemu_ga_probes
+      changed_when: false
+
+    - name: "4. Verify Virtio Serial Channel Sockets on Hypervisor Host"
+      ansible.builtin.shell: |
+        ls -la /var/lib/libvirt/qemu/channel/target/ 2>/dev/null || echo "No active virtio serial channel sockets."
+      register: channel_sockets
+      changed_when: false
+
+    - name: "5. Save QEMU Guest Agent Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM QEMU GUEST AGENT (QEMU-GA) HEALTH AUDIT REPORT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel Release    : {{ ansible_kernel }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          Running VMs Count : {{ running_vms.stdout_lines | length }}
+          ==============================================================================
+
+          --- 1. RUNNING VIRTUAL MACHINES ---
+          {{ running_vms.stdout }}
+
+          --- 2. GUEST AGENT PROBE RESULTS ---
+          {{ qemu_ga_probes.stdout }}
+
+          --- 3. HOST CHANNEL TARGET SOCKETS ---
+          {{ channel_sockets.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/qemu_guest_agent_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display QEMU-GA Status Summary"
+      ansible.builtin.debug:
+        msg: "QEMU guest agent audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/qemu_guest_agent_audit.txt"

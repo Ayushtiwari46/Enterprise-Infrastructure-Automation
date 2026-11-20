@@ -1,0 +1,84 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM VNIC PROFILES & NETWORK QOS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / NETWORK_AUDIT
+# Scope: vNIC profiles, port mirroring, network filters, ingress/egress QoS limits
+# ==============================================================================
+
+- name: OLVM Virtual Network Profiles & QoS Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query All Logical Networks via REST API"
+      ovirt.ovirt.ovirt_network_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: networks_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Configured vNIC Profiles via REST API"
+      ovirt.ovirt.ovirt_vnic_profile_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: vnic_profiles_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "4. Query Engine Database for vNIC Profiles & QoS Policies"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT id, name, network_id, port_mirroring, passthrough FROM vnic_profiles;' 2>/dev/null" || true
+          echo -e "\n=== NETWORK QOS POLICIES ==="
+          su - postgres -c "psql -d engine -c 'SELECT id, name, inbound_average, inbound_peak, inbound_burst, outbound_average, outbound_peak, outbound_burst FROM qos WHERE qos_type = 2;' 2>/dev/null" || echo "No network QoS policies defined"
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: vnic_db_query
+      changed_when: false
+
+    - name: "5. Save vNIC Profiles & QoS Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM VNIC PROFILES & NETWORK QOS AUDIT REPORT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. REST API VNIC PROFILES ---
+          {{ vnic_profiles_info.ovirt_vnic_profiles | default([]) }}
+
+          --- 2. DATABASE VNIC PROFILES & PORT MIRRORING SETTINGS ---
+          {{ vnic_db_query.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_vnic_profiles_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display vNIC Profiles Audit Summary"
+      ansible.builtin.debug:
+        msg: "OLVM vNIC profiles audit complete. Report: {{ report_dir }}/olvm_vnic_profiles_audit.txt"

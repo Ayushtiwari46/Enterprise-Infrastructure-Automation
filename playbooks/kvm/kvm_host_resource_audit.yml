@@ -1,0 +1,108 @@
+---
+# ==============================================================================
+# PLAYBOOK: kvm_host_resource_audit.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported Platforms: Enterprise KVM / QEMU / libvirt on Oracle Linux, RHEL, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Enterprise KVM Hypervisor Host Resource, Domain, and Bridge Audit
+  hosts: kvm_hypervisors
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  tasks:
+    - name: 1. Gather Minimal Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'min'
+          - 'hardware'
+          - 'network'
+
+    - name: 2. Query Libvirt Daemon Status (libvirtd)
+      ansible.builtin.command:
+        cmd: systemctl status libvirtd --no-pager
+      register: libvirtd_status
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Active and Inactive KVM Guest Domains (virsh list --all)
+      ansible.builtin.command:
+        cmd: virsh list --all
+      register: virsh_domains
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Query Libvirt Storage Pools (virsh pool-list --all)
+      ansible.builtin.command:
+        cmd: virsh pool-list --all
+      register: virsh_pools
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Query Libvirt Virtual Networks (virsh net-list --all)
+      ansible.builtin.command:
+        cmd: virsh net-list --all
+      register: virsh_networks
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Query Linux Bridge and Open vSwitch Configurations (brctl / ip link)
+      ansible.builtin.command:
+        cmd: ip -d link show type bridge
+      register: bridge_links
+      changed_when: false
+      failed_when: false
+
+    - name: 7. Query Hypervisor Hardware Virtualization Extensions (vmx / svm)
+      ansible.builtin.command:
+        cmd: egrep -c '(vmx|svm)' /proc/cpuinfo
+      register: cpu_virt_flags
+      changed_when: false
+      failed_when: false
+
+    - name: 8. Ensure Controller Performance Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 9. Save KVM Hypervisor Telemetry Artifact
+      ansible.builtin.copy:
+        content: |
+          === ENTERPRISE KVM HYPERVISOR AUDIT: {{ inventory_hostname }} ===
+          Hardware CPU Virtualization Cores (vmx/svm): {{ cpu_virt_flags.stdout | default('0') }}
+          Total Host RAM (MB): {{ ansible_memtotal_mb | default('N/A') }}
+          
+          --- LIBVIRTD SERVICE STATUS ---
+          {{ libvirtd_status.stdout | default('libvirtd query failed') }}
+          
+          --- KVM GUEST DOMAINS (virsh list --all) ---
+          {{ virsh_domains.stdout | default('virsh domains query failed') }}
+          
+          --- STORAGE POOLS (virsh pool-list --all) ---
+          {{ virsh_pools.stdout | default('virsh pools query failed') }}
+          
+          --- VIRTUAL NETWORKS (virsh net-list --all) ---
+          {{ virsh_networks.stdout | default('virsh networks query failed') }}
+          
+          --- LINUX BRIDGES ---
+          {{ bridge_links.stdout | default('No Linux bridge interfaces detected') }}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/kvm_hypervisor_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Display KVM Hypervisor Status
+      ansible.builtin.debug:
+        msg: "KVM Hypervisor {{ inventory_hostname }}: Audit complete. Domains detected: {{ virsh_domains.stdout_lines | default([]) | length }}"

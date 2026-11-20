@@ -1,0 +1,7 @@
+# ==============================================================================
+# VERITAS CLUSTER SERVER (VCS / INFOSCALE) VARIABLES
+# ==============================================================================
+veritas_bin_path: "/opt/VRTSvcs/bin"
+veritas_gab_bin: "/sbin/gabconfig"
+veritas_llt_bin: "/sbin/lltconfig"
+veritas_service_group_fault_alert: true

@@ -1,0 +1,70 @@
+---
+# ==============================================================================
+# PLAYBOOK: cluster_veritas_vcs_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: Veritas InfoScale / Cluster Server (VCS 7.x, 8.x) on Linux / AIX / Solaris
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Veritas InfoScale / VCS Cluster Heartbeat, GAB, and Service Group Audit
+  hosts: veritas_vcs_nodes:mock_targets
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/clustering/veritas.yml
+
+  tasks:
+    - name: 1. Query Group Membership and Atomic Broadcast State (gabconfig -a)
+      ansible.builtin.command:
+        cmd: "{{ veritas_gab_bin }} -a"
+      register: vcs_gab_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Low Latency Transport Interconnect Status (lltstat -nvv)
+      ansible.builtin.command:
+        cmd: "{{ veritas_llt_bin }} -nvv"
+      register: vcs_llt_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query VCS Service Group and Resource Summary (hastatus -sum)
+      ansible.builtin.command:
+        cmd: "{{ veritas_bin_path }}/hastatus -sum"
+      register: vcs_hastatus_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save Veritas Cluster Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === VERITAS INFOSCALE / VCS CLUSTER AUDIT: {{ inventory_hostname }} ===
+          
+          --- GAB PORT MEMBERSHIP (gabconfig -a) ---
+          {{ vcs_gab_raw.stdout | default('GAB binary unavailable or mock environment') }}
+          
+          --- LLT HEARTBEAT INTERCONNECT (lltstat) ---
+          {{ vcs_llt_raw.stdout | default('LLT query unavailable') }}
+          
+          --- SERVICE GROUP SUMMARY (hastatus -sum) ---
+          {{ vcs_hastatus_raw.stdout | default('hastatus query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/veritas_vcs_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display VCS Status Summary
+      ansible.builtin.debug:
+        msg: "Veritas VCS cluster audit complete for node {{ inventory_hostname }}."

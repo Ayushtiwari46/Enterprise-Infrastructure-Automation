@@ -1,0 +1,75 @@
+---
+# ==============================================================================
+# PLAYBOOK: san_brocade_switch_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: Brocade Fabric OS (FOS 8.x, 9.x) / REST API & CLI
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Brocade SAN Switch Hardware Chassis, Blade, and Firmware Inventory
+  hosts: brocade_san:mock_san
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/networking/brocade.yml
+
+  vars:
+    switch_ip: "{{ ansible_host | default('10.100.85.11') }}"
+    switch_user: "{{ san_user | default('admin') }}"
+
+  tasks:
+    - name: 1. Query Switch Show Overview (switchshow)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ brocade_ssh_port }} {{ switch_user }}@{{ switch_ip }} switchshow"
+      register: brocade_switchshow
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Chassis and Sensor Status (chassisshow / sensorshow)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ brocade_ssh_port }} {{ switch_user }}@{{ switch_ip }} chassisshow"
+      register: brocade_chassis
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query FOS Firmware Version (version)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ brocade_ssh_port }} {{ switch_user }}@{{ switch_ip }} version"
+      register: brocade_version
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save Brocade Switch Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === BROCADE SAN SWITCH INVENTORY: {{ inventory_hostname }} ===
+          Endpoint: {{ switch_ip }}
+          
+          --- FOS FIRMWARE VERSION ---
+          {{ brocade_version.stdout | default('CLI query unavailable or mock environment') }}
+          
+          --- SWITCH IDENTIFICATION (switchshow) ---
+          {{ brocade_switchshow.stdout | default('switchshow output unavailable') }}
+          
+          --- CHASSIS & HARDWARE BLADES ---
+          {{ brocade_chassis.stdout | default('chassisshow output unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}/brocade_switch_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display Brocade Inventory Status
+      ansible.builtin.debug:
+        msg: "Brocade SAN switch inventory complete for {{ inventory_hostname }}."

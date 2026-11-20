@@ -1,0 +1,106 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX KERNEL CRASH & KDUMP READINESS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / L3_DIAGNOSTICS
+# Scope: kdump service state, memory reservation, /etc/kdump.conf, dump path
+# ==============================================================================
+
+- name: Enterprise Linux Kernel Crash Dump (kdump) Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Host Configuration Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Verify Kdump Systemd Service Status"
+      ansible.builtin.shell: |
+        systemctl status kdump --no-pager 2>&1 || true
+      register: kdump_service_status
+      changed_when: false
+
+    - name: "3. Check Kernel Boot CommandLine Crashkernel Parameter"
+      ansible.builtin.shell: |
+        cat /proc/cmdline | tr " " "\n" | grep -E "^crashkernel=" || echo "crashkernel=none_configured"
+      register: crashkernel_param
+      changed_when: false
+
+    - name: "4. Check Kdump Memory Reservation Status"
+      ansible.builtin.shell: |
+        cat /sys/kernel/kexec_crash_loaded 2>/dev/null || echo "kexec_crash_loaded_unavailable"
+      register: kexec_loaded
+      changed_when: false
+
+    - name: "5. Audit /etc/kdump.conf Configuration Parameters"
+      ansible.builtin.shell: |
+        if [ -f /etc/kdump.conf ]; then
+          grep -v -E "^(#|$)" /etc/kdump.conf || echo "default_configuration"
+        else
+          echo "kdump.conf not found"
+        fi
+      register: kdump_conf
+      changed_when: false
+
+    - name: "6. Audit Available Disk Space in Kdump Target Directory"
+      ansible.builtin.shell: |
+        dump_path=$(grep -E "^path " /etc/kdump.conf 2>/dev/null | awk '{print $2}' || echo "/var/crash")
+        [ -z "$dump_path" ] && dump_path="/var/crash"
+        if [ -d "$dump_path" ]; then
+          df -hP "$dump_path"
+        else
+          echo "Dump path $dump_path does not exist"
+        fi
+      register: kdump_disk_space
+      changed_when: false
+
+    - name: "7. Save Kernel Crash Dump Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX KERNEL CRASH DUMP (KDUMP) OPERATIONAL AUDIT
+          ==============================================================================
+          Target Host          : {{ inventory_hostname }}
+          Distribution         : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel Release       : {{ ansible_kernel }}
+          Timestamp            : {{ ansible_date_time.iso8601 }}
+          Crashkernel Cmdline  : {{ crashkernel_param.stdout }}
+          Kexec Crash Loaded   : {{ kexec_loaded.stdout }}
+          ==============================================================================
+
+          --- 1. KDUMP SERVICE STATUS ---
+          {{ kdump_service_status.stdout }}
+
+          --- 2. ACTIVE /etc/kdump.conf DIRECTIVES ---
+          {{ kdump_conf.stdout }}
+
+          --- 3. KDUMP TARGET DISK CAPACITY ---
+          {{ kdump_disk_space.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/kdump_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display Kdump Operational Status Summary"
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Crashkernel Reservation: {{ crashkernel_param.stdout }}"
+          - "Kexec Crash Loaded: {{ kexec_loaded.stdout }}"
+          - "Report Path: {{ report_dir }}/kdump_audit.txt"

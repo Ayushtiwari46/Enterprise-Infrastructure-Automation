@@ -1,0 +1,78 @@
+---
+# ==============================================================================
+# PLAYBOOK: vmware_snapshot_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: VMware vSphere 6.7, 7.0, 8.0
+# Verified Modules (FQCN):
+#   - community.vmware.vmware_guest_snapshot_info
+#   - community.vmware.vmware_vm_info
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: VMware Virtual Machine Snapshot Age and Orphan Disk Audit
+  hosts: vmware_vcenter:mock_vmware
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/vmware.yml
+
+  vars:
+    vcenter_hostname: "{{ vcenter_host | default('vcenter.corp.internal') }}"
+    vcenter_username: "{{ vcenter_user | default('administrator@vsphere.local') }}"
+    vcenter_password: "{{ vcenter_pass | default('VMware@123') }}"
+    max_snapshot_age_hours: "{{ vmware_thresholds.snapshot_age_critical_hours | default(72) }}"
+
+  tasks:
+    - name: 1. Discover All Registered Virtual Machines
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: all_vms
+      ignore_errors: true
+
+    - name: 2. Query Snapshots for Discovered Virtual Machines
+      community.vmware.vmware_guest_snapshot_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ datacenter | default('ha-datacenter') }}"
+        name: "{{ item.guest_name }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      loop: "{{ all_vms.virtual_machines | default([]) }}"
+      register: snapshot_query_results
+      ignore_errors: true
+
+    - name: 3. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save Snapshot Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === VMWARE SNAPSHOT AUDIT REPORT: {{ inventory_hostname }} ===
+          Audit Threshold: Flags snapshots older than {{ max_snapshot_age_hours }} hours.
+          
+          --- DISCOVERED SNAPSHOTS ---
+          {% for r in snapshot_query_results.results | default([]) if r.guest_snapshots is defined and r.guest_snapshots | length > 0 %}
+          VM Name: {{ r.item.guest_name }}
+          Snapshots:
+          {{ r.guest_snapshots | to_nice_yaml }}
+          {% else %}
+          No stale or active snapshots detected across queried VMs.
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/snapshot_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display Snapshot Audit Status
+      ansible.builtin.debug:
+        msg: "Snapshot audit completed for vCenter {{ inventory_hostname }}."

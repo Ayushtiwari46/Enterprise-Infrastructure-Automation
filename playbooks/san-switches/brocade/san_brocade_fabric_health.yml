@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# PLAYBOOK: san_brocade_fabric_health.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: Brocade Fabric OS (FOS 8.x, 9.x)
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Brocade SAN Fabric Topology, Principal Switch, and Zoning Database Audit
+  hosts: brocade_san:mock_san
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/networking/brocade.yml
+
+  vars:
+    switch_ip: "{{ ansible_host | default('10.100.85.11') }}"
+    switch_user: "{{ san_user | default('admin') }}"
+
+  tasks:
+    - name: 1. Query Fabric Topology and Inter-Switch Links (fabricshow)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ brocade_ssh_port }} {{ switch_user }}@{{ switch_ip }} fabricshow"
+      register: brocade_fabric
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Active Zoning Configuration Database (cfgshow)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ brocade_ssh_port }} {{ switch_user }}@{{ switch_ip }} cfgshow"
+      register: brocade_cfgshow
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query ISL Trunking and Link Aggregation (trunkshow)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ brocade_ssh_port }} {{ switch_user }}@{{ switch_ip }} trunkshow"
+      register: brocade_trunkshow
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save Brocade Fabric Health Artifact
+      ansible.builtin.copy:
+        content: |
+          === BROCADE SAN FABRIC HEALTH & ZONING AUDIT: {{ inventory_hostname }} ===
+          
+          --- FABRIC TOPOLOGY & PRINCIPAL SWITCH ---
+          {{ brocade_fabric.stdout | default('fabricshow query unavailable or mock environment') }}
+          
+          --- ISL TRUNKING STATUS ---
+          {{ brocade_trunkshow.stdout | default('trunkshow query unavailable') }}
+          
+          --- ACTIVE ZONING CONFIGURATION (cfgshow) ---
+          {{ brocade_cfgshow.stdout | default('cfgshow query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/brocade_fabric_health.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display Fabric Health Status
+      ansible.builtin.debug:
+        msg: "Brocade SAN fabric and zoning audit complete for {{ inventory_hostname }}."

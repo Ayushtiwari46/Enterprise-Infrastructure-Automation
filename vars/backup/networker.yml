@@ -1,0 +1,9 @@
+# ==============================================================================
+# DELL EMC NETWORKER VARIABLES
+# ==============================================================================
+networker_bin_path: "/usr/sbin"
+networker_nsradmin_bin: "/usr/sbin/nsradmin"
+networker_nsrwatch_bin: "/usr/sbin/nsrwatch"
+networker_client_daemon: "nsrexecd"
+networker_log_path: "/nsr/logs/daemon.raw"
+networker_client_save_warning_code: 1

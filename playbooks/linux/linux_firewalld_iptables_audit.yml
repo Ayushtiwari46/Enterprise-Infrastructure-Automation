@@ -1,0 +1,101 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX FIREWALLD & IPTABLES/NFTABLES SECURITY AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / SECURITY_AUDIT
+# Scope: firewalld active zones, rich rules, direct rules, iptables/nftables
+# ==============================================================================
+
+- name: Enterprise Linux Firewall & Packet Filtering Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query Firewalld Service State"
+      ansible.builtin.shell: |
+        systemctl status firewalld --no-pager 2>&1 || echo "firewalld_inactive"
+      register: firewalld_service
+      changed_when: false
+
+    - name: "3. Query Firewalld Active Zones and Detailed Rule Configuration"
+      ansible.builtin.shell: |
+        if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active firewalld >/dev/null 2>&1; then
+          echo "=== ACTIVE ZONES ==="
+          firewall-cmd --get-active-zones
+          echo -e "\n=== ALL ZONES CONFIGURATION ==="
+          firewall-cmd --list-all-zones
+        else
+          echo "firewall-cmd inactive or not running"
+        fi
+      register: firewalld_zones
+      changed_when: false
+
+    - name: "4. Audit Iptables Active Packet Filter Chains (iptables -S)"
+      ansible.builtin.shell: |
+        if command -v iptables >/dev/null 2>&1; then
+          iptables -S 2>/dev/null | head -n 100
+        else
+          echo "iptables not installed"
+        fi
+      register: iptables_rules
+      changed_when: false
+
+    - name: "5. Audit Nftables Ruleset (nft list ruleset)"
+      ansible.builtin.shell: |
+        if command -v nft >/dev/null 2>&1; then
+          nft list ruleset 2>/dev/null | head -n 100 || echo "nftables empty"
+        else
+          echo "nft command unavailable"
+        fi
+      register: nftables_rules
+      changed_when: false
+
+    - name: "6. Save Firewall Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX FIREWALLD & IPTABLES SECURITY AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. FIREWALLD SYSTEMD STATUS ---
+          {{ firewalld_service.stdout }}
+
+          --- 2. FIREWALLD ZONES & POLICIES ---
+          {{ firewalld_zones.stdout }}
+
+          --- 3. IPTABLES ACTIVE CHAINS ---
+          {{ iptables_rules.stdout }}
+
+          --- 4. NFTABLES RULESET ---
+          {{ nftables_rules.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/firewall_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Firewall Status Summary"
+      ansible.builtin.debug:
+        msg: "Firewall configuration audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/firewall_audit.txt"

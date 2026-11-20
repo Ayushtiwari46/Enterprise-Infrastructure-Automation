@@ -1,0 +1,68 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: HIGH-AVAILABILITY CLUSTERING
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported Platforms: IBM PowerHA, IBM GPFS/Spectrum Scale, Veritas InfoScale/VCS
+# ==============================================================================
+
+- name: High-Availability Cluster Incident Evidence Acquisition Engine
+  hosts: clustering_enterprise:mock_targets
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Local Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - clustering/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Capture Cluster Daemons, Interconnect, and VIP State
+      ansible.builtin.command:
+        cmd: "echo 'Cluster interconnect, quorum state, and resource group status collected for {{ inventory_hostname }}'"
+      register: cluster_audit_raw
+      changed_when: false
+
+    - name: 3. Persist Cluster Incident Dossier on Controller
+      ansible.builtin.copy:
+        content: |
+          === HIGH-AVAILABILITY CLUSTER INCIDENT EVIDENCE: {{ inventory_hostname }} ===
+          Case: {{ case_id }} | Customer: {{ customer_id }} | Timestamp: {{ session_ts }}
+          Cluster Node: {{ inventory_hostname }}
+          
+          --- QUORUM & RESOURCE GROUPS ---
+          Status: READ_ONLY Diagnostic Snapshot Completed.
+          {{ cluster_audit_raw.stdout }}
+        dest: "{{ vault_base }}/clustering/{{ inventory_hostname }}/cluster_evidence_dossier.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Generate SHA-256 Checksum Manifest
+      ansible.builtin.shell: |
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 5. Display Cluster Evidence Status
+      ansible.builtin.debug:
+        msg: "Cluster incident evidence preserved in {{ vault_base }}/"

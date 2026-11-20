@@ -1,0 +1,87 @@
+---
+# ==============================================================================
+# CHANGE PLAYBOOK: VMWARE VM SNAPSHOT REMOVAL & CONSOLIDATION
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: MUTATING_CHANGE (Requires explicit confirmation)
+# Guard: confirm_change == true
+# Check Mode Support: FULL (--check / --diff supported)
+# ==============================================================================
+
+- name: VMware vSphere VM Snapshot Consolidation
+  hosts: vmware_vcenter
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/vmware.yml
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_VMW_001') }}"
+    confirm_change: false
+    target_vm: "{{ vm_name | default('lab-app-vm01') }}"
+
+  pre_tasks:
+    - name: 1. Change Authorization & Safety Assertion
+      ansible.builtin.fail:
+        msg: >
+          CRITICAL ERROR: Change has NOT been confirmed!
+          This playbook consolidates and deletes VMware virtual machine snapshots.
+          To execute this change, you must explicitly supply: -e "confirm_change=true"
+          Alternatively, test this change using --check mode.
+      when: not (confirm_change | bool) and not ansible_check_mode
+
+    - name: 2. Query Existing Snapshots for Target Virtual Machine
+      community.vmware.vmware_guest_snapshot_info:
+        hostname: "{{ vmware_vcenter_hostname }}"
+        username: "{{ vmware_vcenter_username }}"
+        password: "{{ vmware_vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs }}"
+        datacenter: "{{ vmware_datacenter }}"
+        name: "{{ target_vm }}"
+      register: snapshot_info
+      delegate_to: localhost
+
+    - name: 3. Display Discovered Snapshots
+      ansible.builtin.debug:
+        msg: "Target VM: {{ target_vm }} snapshots found: {{ snapshot_info.guest_snapshots | default([]) }}"
+
+  tasks:
+    - name: 4. Remove All Snapshots and Consolidate Virtual Disks
+      community.vmware.vmware_guest_snapshot:
+        hostname: "{{ vmware_vcenter_hostname }}"
+        username: "{{ vmware_vcenter_username }}"
+        password: "{{ vmware_vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs }}"
+        datacenter: "{{ vmware_datacenter }}"
+        name: "{{ target_vm }}"
+        state: absent_all
+      delegate_to: localhost
+      register: consolidate_result
+
+  post_tasks:
+    - name: 5. Verify Target VM Snapshots Completely Removed
+      community.vmware.vmware_guest_snapshot_info:
+        hostname: "{{ vmware_vcenter_hostname }}"
+        username: "{{ vmware_vcenter_username }}"
+        password: "{{ vmware_vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs }}"
+        datacenter: "{{ vmware_datacenter }}"
+        name: "{{ target_vm }}"
+      register: post_snapshot_info
+      delegate_to: localhost
+
+    - name: 6. Record Consolidation Evidence on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          VMWARE SNAPSHOT CONSOLIDATION AUDIT RECORD: {{ change_id }}
+          ==============================================================================
+          Target Virtual Machine : {{ target_vm }}
+          Datacenter             : {{ vmware_datacenter }}
+          Pre-Change Snapshots   : {{ snapshot_info.guest_snapshots | default([]) | length }}
+          Post-Change Snapshots  : {{ post_snapshot_info.guest_snapshots | default([]) | length }}
+          Status                 : CONSOLIDATED_SUCCESSFULLY
+          ==============================================================================
+        dest: "{{ playbook_dir }}/../../../reports/changes/change_vmware_{{ change_id }}_{{ target_vm }}.txt"
+        mode: '0644'
+      delegate_to: localhost

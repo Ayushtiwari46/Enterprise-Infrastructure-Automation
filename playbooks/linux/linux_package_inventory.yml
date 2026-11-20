@@ -1,0 +1,93 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_package_inventory.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.package_facts
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Software Package and Repository Audit
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Package Facts via Native Manager
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: 2. Query Configured Package Repositories (RPM / YUM / DNF)
+      ansible.builtin.command:
+        cmd: dnf repolist -v
+      register: dnf_repos
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Fallback Repositories if DNF unavailable (YUM)
+      ansible.builtin.command:
+        cmd: yum repolist
+      register: yum_repos
+      changed_when: false
+      failed_when: false
+      when: dnf_repos.rc != 0
+
+    - name: 4. Query Installed Kernel Versions
+      ansible.builtin.command:
+        cmd: rpm -q kernel kernel-uek
+      register: installed_kernels
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Query Pending Security Updates (Non-destructive check)
+      ansible.builtin.command:
+        cmd: dnf check-update --security
+      register: security_updates
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Construct Package Audit Summary
+      ansible.builtin.set_fact:
+        pkg_summary:
+          hostname: "{{ inventory_hostname }}"
+          total_installed_packages: "{{ ansible_facts.packages | default({}) | length }}"
+          installed_kernels: "{{ installed_kernels.stdout_lines | default([]) }}"
+          security_update_return_code: "{{ security_updates.rc | default(0) }}"
+
+    - name: 7. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 8. Save Package Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === PACKAGE & REPOSITORY AUDIT: {{ inventory_hostname }} ===
+          Total Installed Packages: {{ pkg_summary.total_installed_packages }}
+          
+          --- INSTALLED KERNELS ---
+          {{ installed_kernels.stdout | default('N/A') }}
+          
+          --- REPOSITORY CATALOG ---
+          {{ dnf_repos.stdout | default(yum_repos.stdout | default('No package manager output')) }}
+          
+          --- PENDING SECURITY ADVISORIES ---
+          {{ security_updates.stdout | default('No pending security advisories detected or check not supported.') }}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/package_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 9. Display Package Audit Summary
+      ansible.builtin.debug:
+        var: pkg_summary

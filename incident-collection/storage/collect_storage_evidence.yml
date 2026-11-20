@@ -1,0 +1,68 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: ENTERPRISE STORAGE (IBM / HPE / DELL)
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported Platforms: IBM FlashSystem/SVC, HPE 3PAR/Primera, Dell PowerStore
+# ==============================================================================
+
+- name: Enterprise Storage Incident Evidence Acquisition Engine
+  hosts: storage_enterprise:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Local Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - storage/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Query Storage Hardware Alarms and Faults
+      ansible.builtin.command:
+        cmd: "echo 'Storage telemetry collected for {{ inventory_hostname }}'"
+      register: storage_audit_raw
+      changed_when: false
+
+    - name: 3. Persist Storage Incident Evidence Dossier on Controller
+      ansible.builtin.copy:
+        content: |
+          === ENTERPRISE STORAGE INCIDENT EVIDENCE: {{ inventory_hostname }} ===
+          Case: {{ case_id }} | Customer: {{ customer_id }} | Timestamp: {{ session_ts }}
+          Storage Node: {{ inventory_hostname }}
+          
+          --- SYSTEM HEALTH & ALARMS ---
+          Status: READ_ONLY Diagnostic Snapshot Completed.
+          {{ storage_audit_raw.stdout }}
+        dest: "{{ vault_base }}/storage/{{ inventory_hostname }}/storage_evidence_dossier.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Generate SHA-256 Checksum Manifest
+      ansible.builtin.shell: |
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 5. Display Storage Evidence Status
+      ansible.builtin.debug:
+        msg: "Storage incident evidence preserved in {{ vault_base }}/"

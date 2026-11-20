@@ -1,0 +1,96 @@
+---
+# ==============================================================================
+# PRE-CHANGE VALIDATION & INFRASTRUCTURE BASELINE CAPTURE ENGINE
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / PRE_CHANGE_BASELINE
+# Usage:
+#   ansible-playbook -i inventories/lab/hosts.yml operations/validation/pre_change_validation.yml -e "change_id=CHG12345"
+# ==============================================================================
+
+- name: Multi-Platform Pre-Change Infrastructure Baseline Capture
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+    - 'loadavg'
+    - 'hardware'
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_BASELINE_001') }}"
+    baseline_dir: "{{ playbook_dir }}/../../reports/validation/pre-change-baselines/{{ change_id }}"
+
+  tasks:
+    - name: 1. Ensure Baseline Output Directory Exists on Controller
+      ansible.builtin.file:
+        path: "{{ baseline_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+    - name: 2. Capture Operating System Uptime and Load Baseline
+      ansible.builtin.command: uptime
+      register: pre_uptime
+      changed_when: false
+
+    - name: 3. Capture Live Filesystem Disk Usage
+      ansible.builtin.command: df -hP
+      register: pre_df
+      changed_when: false
+
+    - name: 4. Capture Running Services Inventory
+      ansible.builtin.shell: |
+        systemctl list-units --type=service --state=running --no-pager 2>/dev/null || service --status-all 2>/dev/null
+      register: pre_services
+      changed_when: false
+
+    - name: 5. Capture Active Network Listening Sockets
+      ansible.builtin.shell: |
+        ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null
+      register: pre_sockets
+      changed_when: false
+
+    - name: 6. Capture Routing Table
+      ansible.builtin.command: ip route show
+      register: pre_routes
+      changed_when: false
+
+    - name: 7. Save Comprehensive Pre-Change Baseline File on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          PRE-CHANGE INFRASTRUCTURE BASELINE RECORD
+          ==============================================================================
+          Change Identifier    : {{ change_id }}
+          Target Node          : {{ inventory_hostname }}
+          Operating System     : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel Release       : {{ ansible_kernel }}
+          Timestamp            : {{ ansible_date_time.iso8601 }}
+          CPU Load Baseline    : {{ ansible_loadavg['1m'] }} (1m), {{ ansible_loadavg['5m'] }} (5m)
+          ==============================================================================
+
+          --- 1. UPTIME ---
+          {{ pre_uptime.stdout }}
+
+          --- 2. FILESYSTEM USAGE (df -hP) ---
+          {{ pre_df.stdout }}
+
+          --- 3. ACTIVE SERVICES SNAPSHOT ---
+          {{ pre_services.stdout }}
+
+          --- 4. LISTENING NETWORK PORTS ---
+          {{ pre_sockets.stdout }}
+
+          --- 5. IP ROUTING TABLE ---
+          {{ pre_routes.stdout }}
+          ==============================================================================
+        dest: "{{ baseline_dir }}/pre_change_baseline_{{ inventory_hostname }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 8. Report Baseline Capture Status
+      ansible.builtin.debug:
+        msg: "Pre-change baseline for {{ inventory_hostname }} saved to {{ baseline_dir }}/pre_change_baseline_{{ inventory_hostname }}.txt"

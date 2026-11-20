@@ -1,0 +1,85 @@
+---
+# ==============================================================================
+# PLAYBOOK: aix_hardware_lpar_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported OS: IBM AIX 6.1, 7.1, 7.2, 7.3 (IBM Power Systems)
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM AIX Hardware, Machine Architecture, and LPAR Inventory
+  hosts: aix_enterprise:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/aix.yml
+
+  tasks:
+    - name: 1. Query System Machine Model and Serial (uname -M / uname -u)
+      ansible.builtin.command:
+        cmd: uname -Mu
+      register: uname_machine
+      changed_when: false
+
+    - name: 2. Query Detailed LPAR Partition Configuration (lparstat -i)
+      ansible.builtin.command:
+        cmd: lparstat -i
+      register: lparstat_info
+      changed_when: false
+
+    - name: 3. Query Micro-Partitioning and Shared Processor Pool State
+      ansible.builtin.command:
+        cmd: lparstat 1 2
+      register: lparstat_sample
+      changed_when: false
+
+    - name: 4. Query Installed Physical and Virtual Devices (lsdev)
+      ansible.builtin.command:
+        cmd: lsdev -C
+      register: lsdev_raw
+      changed_when: false
+
+    - name: 5. Query Physical Processor and Core Count (lsattr -El sys0)
+      ansible.builtin.command:
+        cmd: lsattr -El sys0 -a modelname,systemid,realmem
+      register: sys0_attributes
+      changed_when: false
+
+    - name: 6. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 7. Save AIX Hardware and LPAR Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM AIX HARDWARE & LPAR INVENTORY: {{ inventory_hostname }} ===
+          Machine Model & Serial: {{ uname_machine.stdout }}
+          
+          --- SYSTEM ATTRIBUTES ---
+          {{ sys0_attributes.stdout | default('N/A') }}
+          
+          --- LPAR PARTITION CHARACTERISTICS (lparstat -i) ---
+          {{ lparstat_info.stdout }}
+          
+          --- LPAR REAL-TIME PROCESSOR SAMPLING ---
+          {{ lparstat_sample.stdout }}
+          
+          --- DEVICE SUMMARY (lsdev -C) ---
+          Total Devices: {{ lsdev_raw.stdout_lines | length }}
+          {{ lsdev_raw.stdout_lines[:30] | join('\n') }}
+        dest: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}/aix_lpar_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 8. Display AIX LPAR Inventory Summary
+      ansible.builtin.debug:
+        msg: "AIX LPAR {{ inventory_hostname }}: {{ uname_machine.stdout }} | Devices cataloged: {{ lsdev_raw.stdout_lines | length }}"

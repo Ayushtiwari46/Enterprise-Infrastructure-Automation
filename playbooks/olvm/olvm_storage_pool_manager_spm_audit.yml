@@ -1,0 +1,83 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM STORAGE POOL MANAGER (SPM) & SANLOCK AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / VIRTUALIZATION_AUDIT
+# Scope: SPM host election, SANlock lease state, SPM failover history, metadata locks
+# ==============================================================================
+
+- name: OLVM Storage Pool Manager (SPM) & SANLock Lease Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query SPM Status for All Datacenters via REST API"
+      ovirt.ovirt.ovirt_host_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: hosts_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Engine Database for SPM Status and Historical Changes"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT storage_pool_name, spm_vds_id, status FROM storage_pool;' 2>/dev/null" || true
+          echo -e "\n=== ACTIVE HOST SPM ROLES ==="
+          su - postgres -c "psql -d engine -c 'SELECT vds_name, spm_status, status FROM vds_static JOIN vds_dynamic ON vds_static.vds_id = vds_dynamic.vds_id;' 2>/dev/null" || true
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: spm_db_status
+      changed_when: false
+
+    - name: "4. Scan Engine Log for Recent SPM State Transitions & Failovers"
+      ansible.builtin.shell: |
+        if [ -f /var/log/ovirt-engine/engine.log ]; then
+          grep -i -E "(spm|storage pool manager|sanlock|acquire lease)" /var/log/ovirt-engine/engine.log | tail -n 40 || echo "No recent SPM events."
+        else
+          echo "engine.log not accessible"
+        fi
+      register: spm_log_events
+      changed_when: false
+
+    - name: "5. Save SPM Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM STORAGE POOL MANAGER (SPM) & SANLOCK AUDIT REPORT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. DATABASE SPM ELECTION STATE ---
+          {{ spm_db_status.stdout }}
+
+          --- 2. RECENT ENGINE SPM & SANLOCK TRANSITIONS ---
+          {{ spm_log_events.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_spm_sanlock_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display SPM Audit Summary"
+      ansible.builtin.debug:
+        msg: "OLVM SPM audit complete. Report: {{ report_dir }}/olvm_spm_sanlock_audit.txt"

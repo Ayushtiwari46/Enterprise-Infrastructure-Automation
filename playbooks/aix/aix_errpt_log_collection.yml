@@ -1,0 +1,104 @@
+---
+# ==============================================================================
+# PLAYBOOK: aix_errpt_log_collection.yml
+# ==============================================================================
+# Operational Category: Log Collection
+# Safety Classification: LOG_COLLECTION
+# Supported OS: IBM AIX 6.1, 7.1, 7.2, 7.3 (IBM Power Systems)
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.fetch
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM AIX errpt Error Log and System Diagnostic Acquisition
+  hosts: aix_enterprise:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/aix.yml
+
+  vars:
+    errpt_days: 7
+
+  tasks:
+    - name: 1. Ensure Target Temporary Staging Directory Exists
+      ansible.builtin.file:
+        path: "/tmp/aix_errpt_{{ inventory_hostname }}"
+        state: directory
+        mode: '0700'
+
+    - name: 2. Extract AIX Detailed Error Report (errpt -a)
+      ansible.builtin.command:
+        cmd: errpt -a
+      register: errpt_detailed
+      changed_when: false
+
+    - name: 3. Extract Summary Error Report (errpt)
+      ansible.builtin.command:
+        cmd: errpt
+      register: errpt_brief
+      changed_when: false
+
+    - name: 4. Extract Hardware Specific Errors (errpt -d H)
+      ansible.builtin.command:
+        cmd: errpt -d H
+      register: errpt_hardware
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Extract Software Specific Errors (errpt -d S)
+      ansible.builtin.command:
+        cmd: errpt -d S
+      register: errpt_software
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Write Extracted Logs to Staging
+      ansible.builtin.copy:
+        content: "{{ errpt_detailed.stdout }}"
+        dest: "/tmp/aix_errpt_{{ inventory_hostname }}/errpt_detailed.log"
+        mode: '0600'
+
+    - name: 7. Ensure Controller Destination Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 8. Fetch Detailed Error Log to Controller
+      ansible.builtin.fetch:
+        src: "/tmp/aix_errpt_{{ inventory_hostname }}/errpt_detailed.log"
+        dest: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}/"
+        flat: true
+
+    - name: 9. Save Error Log Summary on Controller
+      ansible.builtin.copy:
+        content: |
+          === IBM AIX ERRPT LOG AUDIT: {{ inventory_hostname }} ===
+          Total Error Events: {{ errpt_brief.stdout_lines | length }}
+          
+          --- BRIEF ERROR LEDGER ---
+          {{ errpt_brief.stdout | default('No errpt entries detected') }}
+          
+          --- HARDWARE ERRORS ---
+          {{ errpt_hardware.stdout | default('None') }}
+          
+          --- SOFTWARE ERRORS ---
+          {{ errpt_software.stdout | default('None') }}
+        dest: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}/aix_errpt_summary.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Clean Up Target Staging Directory
+      ansible.builtin.file:
+        path: "/tmp/aix_errpt_{{ inventory_hostname }}"
+        state: absent
+
+    - name: 11. Display Errpt Acquisition Summary
+      ansible.builtin.debug:
+        msg: "Extracted errpt diagnostics for AIX host {{ inventory_hostname }}. Preserved in reports/log-collection/{{ inventory_hostname }}/"

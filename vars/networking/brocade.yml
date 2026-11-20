@@ -1,0 +1,8 @@
+# ==============================================================================
+# BROCADE SAN SWITCH (FABRIC OS) VARIABLES
+# ==============================================================================
+brocade_rest_port: 443
+brocade_ssh_port: 22
+brocade_crc_error_threshold: 10
+brocade_rx_power_min_dbm: -10.0
+brocade_tx_power_min_dbm: -5.0

@@ -1,0 +1,65 @@
+---
+# ==============================================================================
+# PLAYBOOK: vmware_datastore_capacity_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: VMware vSphere VMFS 5/6, NFS v3/v4.1, vSAN
+# Verified Modules (FQCN):
+#   - community.vmware.vmware_datastore_info
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: VMware vSphere Datastore Capacity, Allocation, and Thin-Provisioning Audit
+  hosts: vmware_vcenter:mock_vmware
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/vmware.yml
+
+  vars:
+    vcenter_hostname: "{{ vcenter_host | default('vcenter.corp.internal') }}"
+    vcenter_username: "{{ vcenter_user | default('administrator@vsphere.local') }}"
+    vcenter_password: "{{ vcenter_pass | default('VMware@123') }}"
+
+  tasks:
+    - name: 1. Query Datastore Capacity and Provisioning Metrics
+      community.vmware.vmware_datastore_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: datastore_info_raw
+      ignore_errors: true
+
+    - name: 2. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 3. Save Datastore Capacity Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === VMWARE DATASTORE CAPACITY AUDIT: {{ inventory_hostname }} ===
+          
+          --- DATASTORE ALLOCATION LEDGER ---
+          {% for ds in datastore_info_raw.datastores | default([]) %}
+          Datastore: {{ ds.name }}
+          - Type: {{ ds.type }}
+          - Total Capacity (GB): {{ (ds.capacity / 1073741824) | round(1) }}
+          - Free Space (GB): {{ (ds.freeSpace / 1073741824) | round(1) }}
+          - Utilization: {{ ((1 - (ds.freeSpace / ds.capacity)) * 100) | round(1) }}%
+          - Accessible: {{ ds.accessible }}
+          - Maintenance Mode: {{ ds.maintenanceMode }}
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/datastore_capacity_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Display Datastore Audit Status
+      ansible.builtin.debug:
+        msg: "Datastore capacity audit complete. Cataloged {{ datastore_info_raw.datastores | default([]) | length }} datastores."

@@ -1,0 +1,90 @@
+---
+# ==============================================================================
+# CHANGE PLAYBOOK: LINUX LVM VOLUME & FILESYSTEM EXTENSION
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: MUTATING_CHANGE (Requires explicit confirmation)
+# Guard: confirm_change == true
+# Check Mode Support: FULL (--check / --diff supported)
+# ==============================================================================
+
+- name: Enterprise Linux Logical Volume & Filesystem Extension
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/linux.yml
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_LVM_001') }}"
+    confirm_change: false
+    target_vg: "{{ vg_name | default('rootvg') }}"
+    target_lv: "{{ lv_name | default('var_lv') }}"
+    extend_size: "{{ add_size | default('+5G') }}"
+
+  pre_tasks:
+    - name: 1. Change Authorization & Safety Assertion
+      ansible.builtin.fail:
+        msg: >
+          CRITICAL ERROR: Change has NOT been confirmed!
+          This playbook expands LVM logical volumes and online filesystems.
+          To execute this change, you must explicitly supply: -e "confirm_change=true"
+          Alternatively, test this change using --check mode.
+      when: not (confirm_change | bool) and not ansible_check_mode
+
+    - name: 2. Capture Pre-Change LV and Filesystem Allocation
+      ansible.builtin.shell: |
+        lvs --noheadings -o lv_name,vg_name,lv_size "/dev/{{ target_vg }}/{{ target_lv }}" 2>/dev/null || echo "LV_NOT_FOUND"
+      register: pre_lv_state
+      changed_when: false
+
+    - name: 3. Verify Target Volume Group Has Sufficient Extents
+      ansible.builtin.shell: |
+        vgs --noheadings -o vg_free "/dev/{{ target_vg }}"
+      register: vg_free_state
+      changed_when: false
+
+    - name: 4. Display Pre-Change Allocation
+      ansible.builtin.debug:
+        msg:
+          - "Target LV: /dev/{{ target_vg }}/{{ target_lv }}"
+          - "Current Size: {{ pre_lv_state.stdout.strip() }}"
+          - "VG Free Space: {{ vg_free_state.stdout.strip() }}"
+
+  tasks:
+    - name: 5. Extend Logical Volume and Online Filesystem
+      community.general.lvol:
+        vg: "{{ target_vg }}"
+        lv: "{{ target_lv }}"
+        size: "{{ extend_size }}"
+        resizefs: true
+      register: lvol_result
+
+  post_tasks:
+    - name: "6. Post-Change Verification: Query Live LV Size"
+      ansible.builtin.shell: |
+        lvs --noheadings -o lv_size "/dev/{{ target_vg }}/{{ target_lv }}"
+      register: post_lv_state
+      changed_when: false
+
+    - name: 7. Validate Expansion
+      ansible.builtin.debug:
+        msg: "LV /dev/{{ target_vg }}/{{ target_lv }} successfully resized to {{ post_lv_state.stdout.strip() }}"
+
+    - name: 8. Record LVM Change Record on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          CHANGE EXECUTION RECORD: {{ change_id }}
+          ==============================================================================
+          Target Host        : {{ inventory_hostname }}
+          Volume Group       : {{ target_vg }}
+          Logical Volume     : {{ target_lv }}
+          Extension Size     : {{ extend_size }}
+          Pre-Change Size    : {{ pre_lv_state.stdout.strip() }}
+          Post-Change Size   : {{ post_lv_state.stdout.strip() }}
+          Change Status      : SUCCESS
+          ==============================================================================
+        dest: "{{ playbook_dir }}/../../../reports/changes/change_lvm_{{ change_id }}_{{ inventory_hostname }}.txt"
+        mode: '0644'
+      delegate_to: localhost

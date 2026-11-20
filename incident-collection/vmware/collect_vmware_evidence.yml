@@ -1,0 +1,85 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: VMWARE VSPHERE
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported Platforms: VMware vSphere 6.7, 7.0, 8.0
+# ==============================================================================
+
+- name: VMware vSphere Incident Evidence Acquisition Engine
+  hosts: vmware_vcenter:mock_vmware
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/vmware.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+    vcenter_hostname: "{{ vcenter_host | default('vcenter.corp.internal') }}"
+    vcenter_username: "{{ vcenter_user | default('administrator@vsphere.local') }}"
+    vcenter_password: "{{ vcenter_pass | default('VMware@123') }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Local Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - vmware/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Query All Virtual Machine States and Events
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: vmware_vms_evidence
+      ignore_errors: true
+
+    - name: 3. Query ESXi Host Hardware Alarms and Sensors
+      community.vmware.vmware_host_facts:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: vmware_hosts_evidence
+      ignore_errors: true
+
+    - name: 4. Persist VMware Incident Dossier on Controller
+      ansible.builtin.copy:
+        content: |
+          === VMWARE VSPHERE INCIDENT EVIDENCE: {{ inventory_hostname }} ===
+          Case: {{ case_id }} | Customer: {{ customer_id }} | Timestamp: {{ session_ts }}
+          
+          --- VM INVENTORY EVIDENCE ---
+          {{ vmware_vms_evidence | to_nice_yaml }}
+          
+          --- ESXI HOST FACTS & SENSORS ---
+          {{ vmware_hosts_evidence | to_nice_yaml }}
+        dest: "{{ vault_base }}/vmware/{{ inventory_hostname }}/vmware_incident_dossier.yml"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Generate SHA-256 Checksums
+      ansible.builtin.shell: |
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 6. Display VMware Evidence Status
+      ansible.builtin.debug:
+        msg: "VMware incident evidence preserved in {{ vault_base }}/"

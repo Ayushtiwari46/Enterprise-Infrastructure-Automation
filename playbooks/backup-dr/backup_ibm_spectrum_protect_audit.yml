@@ -1,0 +1,69 @@
+---
+# ==============================================================================
+# PLAYBOOK: backup_ibm_spectrum_protect_audit.yml
+# ==============================================================================
+# Operational Category: Health Checks
+# Safety Classification: READ_ONLY
+# Supported Platforms: IBM Spectrum Protect / Tivoli Storage Manager (TSM) Client
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.stat
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM Spectrum Protect (TSM) Backup Client Daemon and Schedule Audit
+  hosts: spectrum_protect_nodes:mock_targets
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/backup/spectrum_protect.yml
+
+  tasks:
+    - name: 1. Query TSM Client Configuration Files (dsm.sys / dsm.opt)
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ tsm_opt_file }}"
+        - "{{ tsm_sys_file }}"
+      register: tsm_config_stats
+
+    - name: 2. Query TSM Client Scheduler Process (dsmc sched)
+      ansible.builtin.command:
+        cmd: pgrep -fl dsmc
+      register: tsm_proc_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Recent Backup Schedule Log (dsmsched.log tail)
+      ansible.builtin.command:
+        cmd: "tail -n 50 {{ tsm_dsmsched_log }}"
+      register: tsm_sched_log_tail
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save TSM Backup Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM SPECTRUM PROTECT (TSM) AUDIT: {{ inventory_hostname }} ===
+          
+          --- SCHEDULER DAEMON PROCESSES ---
+          {{ tsm_proc_raw.stdout | default('No active dsmc scheduler process found or mock environment') }}
+          
+          --- SCHEDULE LOG EXCERPT (dsmsched.log) ---
+          {{ tsm_sched_log_tail.stdout | default('dsmsched.log unavailable') }}
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/tsm_backup_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display TSM Status Summary
+      ansible.builtin.debug:
+        msg: "TSM backup audit complete for {{ inventory_hostname }}."

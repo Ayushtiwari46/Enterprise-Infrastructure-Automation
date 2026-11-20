@@ -1,0 +1,65 @@
+---
+# ==============================================================================
+# PLAYBOOK: vmware_esxi_host_health.yml
+# ==============================================================================
+# Operational Category: Health Checks
+# Safety Classification: READ_ONLY
+# Supported Platforms: VMware vSphere ESXi 6.7, 7.0, 8.0
+# Verified Modules (FQCN):
+#   - community.vmware.vmware_host_facts
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: VMware ESXi Hypervisor Host Health, Sensors, and Maintenance State Audit
+  hosts: vmware_vcenter:mock_vmware
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/vmware.yml
+
+  vars:
+    vcenter_hostname: "{{ vcenter_host | default('vcenter.corp.internal') }}"
+    vcenter_username: "{{ vcenter_user | default('administrator@vsphere.local') }}"
+    vcenter_password: "{{ vcenter_pass | default('VMware@123') }}"
+
+  tasks:
+    - name: 1. Gather ESXi Host Runtime Facts
+      community.vmware.vmware_host_facts:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: host_facts_raw
+      ignore_errors: true
+
+    - name: 2. Ensure Controller Health Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 3. Save ESXi Health Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === VMWARE ESXI HOST HEALTH AUDIT: {{ inventory_hostname }} ===
+          Target Endpoint: {{ vcenter_hostname }}
+          
+          --- HOST RUNTIME STATUS & MAINTENANCE STATE ---
+          {% for host, facts in host_facts_raw.ansible_facts.items() if host_facts_raw.ansible_facts is defined %}
+          Host: {{ host }}
+          - Connection State: {{ facts.runtime.connectionState | default('N/A') }}
+          - Power State: {{ facts.runtime.powerState | default('N/A') }}
+          - In Maintenance Mode: {{ facts.runtime.inMaintenanceMode | default('N/A') }}
+          - ESXi Version: {{ facts.config.product.fullName | default('N/A') }}
+          - Hardware Model: {{ facts.hardware.systemInfo.model | default('N/A') }}
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/esxi_host_health.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Display ESXi Host Health Audit Status
+      ansible.builtin.debug:
+        msg: "ESXi Host health audit completed for target {{ inventory_hostname }}."

@@ -1,0 +1,102 @@
+---
+# ==============================================================================
+# PLAYBOOK: aix_system_health_check.yml
+# ==============================================================================
+# Operational Category: Health Checks
+# Safety Classification: READ_ONLY
+# Supported OS: IBM AIX 6.1, 7.1, 7.2, 7.3 (IBM Power Systems)
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM AIX System Health and Maintenance Level Audit
+  hosts: aix_enterprise:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/aix.yml
+
+  tasks:
+    - name: 1. Gather Minimal AIX Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'min'
+          - 'distribution'
+          - 'hardware'
+
+    - name: 2. Query AIX OS Maintenance Level (oslevel -s)
+      ansible.builtin.command:
+        cmd: oslevel -s
+      register: aix_oslevel
+      changed_when: false
+
+    - name: 3. Query System Uptime and Load Average
+      ansible.builtin.command:
+        cmd: uptime
+      register: aix_uptime
+      changed_when: false
+
+    - name: 4. Check Dedicated Dump Device Status (sysdumpdev -l)
+      ansible.builtin.command:
+        cmd: sysdumpdev -l
+      register: sysdump_status
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Query Recent System Error Summary (errpt)
+      ansible.builtin.command:
+        cmd: errpt
+      register: errpt_summary
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Check System Paging Space Allocation (lsps -a)
+      ansible.builtin.command:
+        cmd: lsps -a
+      register: lsps_raw
+      changed_when: false
+
+    - name: 7. Construct AIX Health Record
+      ansible.builtin.set_fact:
+        aix_health:
+          hostname: "{{ inventory_hostname }}"
+          os_level: "{{ aix_oslevel.stdout.strip() }}"
+          uptime: "{{ aix_uptime.stdout.strip() }}"
+          dump_device: "{{ sysdump_status.stdout_lines[:4] | default([]) }}"
+          recent_errpt_count: "{{ errpt_summary.stdout_lines | default([]) | length }}"
+          paging_space: "{{ lsps_raw.stdout_lines | default([]) }}"
+
+    - name: 8. Ensure Controller Health Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 9. Save AIX Health Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM AIX SYSTEM HEALTH REPORT: {{ inventory_hostname }} ===
+          OS Maintenance Level: {{ aix_oslevel.stdout }}
+          Uptime: {{ aix_uptime.stdout }}
+          
+          --- SYSTEM DUMP DEVICE CONFIGURATION ---
+          {{ sysdump_status.stdout | default('sysdumpdev query unavailable') }}
+          
+          --- PAGING SPACE ALLOCATION (lsps -a) ---
+          {{ lsps_raw.stdout }}
+          
+          --- ERRPT RECENT ERROR ENTRIES (TOP 15) ---
+          {{ errpt_summary.stdout_lines[:15] | default(['No errors logged in errpt']) | join('\n') }}
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/aix_health_report.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Display AIX Health Summary
+      ansible.builtin.debug:
+        var: aix_health

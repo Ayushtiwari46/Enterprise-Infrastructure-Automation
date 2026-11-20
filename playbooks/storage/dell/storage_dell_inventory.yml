@@ -1,0 +1,82 @@
+---
+# ==============================================================================
+# PLAYBOOK: storage_dell_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: Dell PowerStore / PowerMax (REST API)
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Dell PowerStore / PowerMax Storage Appliance and Pool Inventory
+  hosts: dell_storage:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/dell.yml
+
+  vars:
+    dell_host: "{{ ansible_host | default('10.100.80.31') }}"
+    dell_user: "{{ storage_user | default('admin') }}"
+    dell_password: "{{ storage_pass | default('Password123!') }}"
+
+  tasks:
+    - name: 1. Query Dell PowerStore Appliance Details via REST
+      ansible.builtin.uri:
+        url: "https://{{ dell_host }}:{{ dell_powerstore_rest_port }}/api/rest/appliance"
+        method: GET
+        user: "{{ dell_user }}"
+        password: "{{ dell_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: dell_appliance_raw
+      ignore_errors: true
+
+    - name: 2. Query Storage Pools / Volume Groups
+      ansible.builtin.uri:
+        url: "https://{{ dell_host }}:{{ dell_powerstore_rest_port }}/api/rest/volume_group"
+        method: GET
+        user: "{{ dell_user }}"
+        password: "{{ dell_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: dell_vol_groups_raw
+      ignore_errors: true
+
+    - name: 3. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save Dell Storage Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === DELL POWERSTORE STORAGE INVENTORY: {{ inventory_hostname }} ===
+          Endpoint: {{ dell_host }}
+          
+          --- APPLIANCE HARDWARE SPECIFICATIONS ---
+          {{ dell_appliance_raw.json | default(dell_appliance_raw.content | default('REST query unavailable or mock environment')) }}
+          
+          --- VOLUME GROUPS & PROVISIONED STORAGE ---
+          {{ dell_vol_groups_raw.json | default(dell_vol_groups_raw.content | default('Volume groups query unavailable')) }}
+        dest: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}/dell_storage_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display Dell Storage Inventory Status
+      ansible.builtin.debug:
+        msg: "Dell Storage inventory complete for {{ inventory_hostname }}."

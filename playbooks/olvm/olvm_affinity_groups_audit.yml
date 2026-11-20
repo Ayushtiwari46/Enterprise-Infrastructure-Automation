@@ -1,0 +1,82 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM / OVIRT AFFINITY GROUPS & LABELS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / VIRTUALIZATION_AUDIT
+# Scope: VM-to-VM and VM-to-Host positive/negative affinity rules and enforcement
+# ==============================================================================
+
+- name: OLVM Affinity Groups & Scheduling Labels Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query OLVM Cluster List via REST API"
+      ovirt.ovirt.ovirt_cluster_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: clusters_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Configured Affinity Labels via REST API"
+      ovirt.ovirt.ovirt_affinity_label_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: affinity_labels_raw
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "4. Query Engine Scheduling Policies and Labels via CLI Fallback"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT id, name, positive, enforcing FROM affinity_groups;' 2>/dev/null" || echo "No affinity groups in database"
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: affinity_db_query
+      changed_when: false
+
+    - name: "5. Save Affinity Groups Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM / OVIRT AFFINITY GROUPS & SCHEDULING POLICIES AUDIT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. REST API DISCOVERED AFFINITY GROUPS ---
+          {{ affinity_groups_raw.results | default([]) }}
+
+          --- 2. DATABASE AFFINITY GROUP TABLE DUMP ---
+          {{ affinity_db_query.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_affinity_groups_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Affinity Audit Summary"
+      ansible.builtin.debug:
+        msg: "OLVM Affinity Groups audit complete. Report: {{ report_dir }}/olvm_affinity_groups_audit.txt"

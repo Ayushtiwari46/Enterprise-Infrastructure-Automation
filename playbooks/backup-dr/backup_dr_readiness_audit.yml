@@ -1,0 +1,66 @@
+---
+# ==============================================================================
+# PLAYBOOK: backup_dr_readiness_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: Multi-Platform (Enterprise Linux, AIX, Windows)
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.stat
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Enterprise Backup and Disaster Recovery Readiness Audit
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+
+  tasks:
+    - name: 1. Gather Minimal Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'min'
+          - 'distribution'
+
+    - name: 2. Check for Installed Backup Client Daemons
+      ansible.builtin.command:
+        cmd: pgrep -l '(dsmc|bpcd|vnetd|nsrexecd|veeam)'
+      register: active_backup_daemons
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Check Disaster Recovery Agent Service States (Systemd / AIX SRC)
+      ansible.builtin.command:
+        cmd: systemctl list-units --type=service --state=running
+      register: running_services
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save Disaster Recovery Readiness Artifact
+      ansible.builtin.copy:
+        content: |
+          === ENTERPRISE BACKUP & DR READINESS AUDIT: {{ inventory_hostname }} ===
+          Operating System: {{ ansible_distribution | default('N/A') }} {{ ansible_distribution_version | default('') }}
+          
+          --- DETECTED BACKUP AGENT PROCESSES ---
+          {{ active_backup_daemons.stdout | default('None detected - Host may not have installed enterprise backup agents.') }}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/dr_readiness_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display DR Readiness Status
+      ansible.builtin.debug:
+        msg: "DR Readiness audit complete on {{ inventory_hostname }}. Active agents: {{ active_backup_daemons.stdout_lines | default([]) }}"

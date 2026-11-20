@@ -1,0 +1,77 @@
+---
+# ==============================================================================
+# PLAYBOOK: vmware_vcenter_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: VMware vSphere 6.7, 7.0, 8.0 (vCenter Server)
+# Verified Modules (FQCN):
+#   - community.vmware.vmware_vm_info
+#   - community.vmware.vmware_host_facts
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: VMware vCenter Inventory, Datacenter, and Cluster Topology Audit
+  hosts: vmware_vcenter:mock_vmware
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/vmware.yml
+
+  vars:
+    vcenter_hostname: "{{ vcenter_host | default('vcenter.corp.internal') }}"
+    vcenter_username: "{{ vcenter_user | default('administrator@vsphere.local') }}"
+    vcenter_password: "{{ vcenter_pass | default('VMware@123') }}"
+
+  tasks:
+    - name: 1. Query vCenter Virtual Machine Inventory
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: vm_inventory_raw
+      ignore_errors: true
+
+    - name: 2. Query ESXi Hypervisor Host Inventory
+      community.vmware.vmware_host_facts:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vmware_validate_certs | default(false) }}"
+      register: host_inventory_raw
+      ignore_errors: true
+
+    - name: 3. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save vCenter Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === VMWARE VCENTER INVENTORY AUDIT: {{ inventory_hostname }} ===
+          Target Endpoint: {{ vcenter_hostname }}
+          
+          --- DISCOVERED VIRTUAL MACHINES ---
+          Total VMs: {{ vm_inventory_raw.virtual_machines | default([]) | length }}
+          {% for vm in vm_inventory_raw.virtual_machines | default([]) %}
+          - Name: {{ vm.guest_name }} | PowerState: {{ vm.power_state }} | IP: {{ vm.ip_address }} | vCPU: {{ vm.num_cpu }} | RAM: {{ vm.memory_mb }} MB
+          {% endfor %}
+          
+          --- DISCOVERED ESXI HOSTS ---
+          Total ESXi Hosts: {{ host_inventory_raw.hosts | default([]) | length }}
+          {% for h in host_inventory_raw.hosts | default([]) %}
+          - Host: {{ h.name }} | State: {{ h.runtime.powerState }} | Model: {{ h.hardware.systemInfo.model }} | CPU Cores: {{ h.hardware.cpuInfo.numCpuCores }}
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}/vcenter_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display Inventory Summary
+      ansible.builtin.debug:
+        msg: "vCenter {{ inventory_hostname }}: Cataloged {{ vm_inventory_raw.virtual_machines | default([]) | length }} VMs and {{ host_inventory_raw.hosts | default([]) | length }} ESXi hosts."

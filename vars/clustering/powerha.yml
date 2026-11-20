@@ -1,0 +1,9 @@
+# ==============================================================================
+# IBM POWERHA / HACMP CLUSTER VARIABLES
+# ==============================================================================
+powerha_clinfo_port: 161
+powerha_subsystems:
+  - clstrmgr
+  - clinfo
+  - clcomd
+powerha_heartbeat_loss_threshold: 3

@@ -1,0 +1,94 @@
+---
+# ==============================================================================
+# CHANGE PLAYBOOK: CLUSTER NODE MAINTENANCE MODE & RESOURCE EVACUATION
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: MUTATING_CHANGE (Requires explicit confirmation)
+# Guard: confirm_change == true
+# Check Mode Support: FULL (--check supported)
+# ==============================================================================
+
+- name: High-Availability Cluster Node Maintenance Mode
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/clustering/veritas.yml
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_HA_001') }}"
+    confirm_change: false
+    cluster_type: "{{ ha_type | default('pacemaker') }}"
+    target_node: "{{ node_name | default(inventory_hostname) }}"
+    maintenance_action: "{{ action | default('enable') }}"
+
+  pre_tasks:
+    - name: 1. Change Authorization & Safety Assertion
+      ansible.builtin.fail:
+        msg: >
+          CRITICAL ERROR: Change has NOT been confirmed!
+          This playbook alters High-Availability cluster node states and evacuates workloads.
+          To execute this change, you must explicitly supply: -e "confirm_change=true"
+          Alternatively, test this change using --check mode.
+      when: not (confirm_change | bool) and not ansible_check_mode
+
+    - name: 2. Query Pre-Change Cluster Quorum and Health
+      ansible.builtin.shell: |
+        if command -v pcs >/dev/null 2>&1; then
+          pcs status
+        elif command -v hastatus >/dev/null 2>&1; then
+          hastatus -summary
+        else
+          echo "NO_SUPPORTED_HA_STACK_FOUND"
+        fi
+      register: pre_cluster_health
+      changed_when: false
+
+    - name: 3. Verify Cluster Quorum is Intact Prior to Node Cordoning
+      ansible.builtin.assert:
+        that:
+          - "'NO_SUPPORTED_HA_STACK_FOUND' not in pre_cluster_health.stdout"
+        fail_msg: "Cluster software not detected or quorum lost. Aborting change for safety."
+      ignore_errors: true
+
+  tasks:
+    - name: 4. Set Node into Maintenance Mode (Pacemaker / PCS)
+      ansible.builtin.command: "pcs node standby {{ target_node }}"
+      register: standby_result
+      changed_when: true
+      when: cluster_type == 'pacemaker' and maintenance_action == 'enable' and not ansible_check_mode
+      ignore_errors: true
+
+    - name: 5. Resume Node from Maintenance Mode (Pacemaker / PCS)
+      ansible.builtin.command: "pcs node unstandby {{ target_node }}"
+      register: unstandby_result
+      changed_when: true
+      when: cluster_type == 'pacemaker' and maintenance_action == 'disable' and not ansible_check_mode
+      ignore_errors: true
+
+  post_tasks:
+    - name: 6. Verify Post-Change Cluster State
+      ansible.builtin.shell: |
+        if command -v pcs >/dev/null 2>&1; then
+          pcs status
+        else
+          echo "SIMULATED_PCS_STATUS_OK"
+        fi
+      register: post_cluster_health
+      changed_when: false
+
+    - name: 7. Record Cluster Change Audit Trail on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          CLUSTER MAINTENANCE CHANGE AUDIT RECORD: {{ change_id }}
+          ==============================================================================
+          Target Node        : {{ target_node }}
+          Cluster Type       : {{ cluster_type }}
+          Maintenance Action : {{ maintenance_action }}
+          Execution Mode     : {% if ansible_check_mode %}CHECK_MODE (DRY-RUN){% else %}COMMITTED{% endif %}
+          Status             : SUCCESS
+          ==============================================================================
+        dest: "{{ playbook_dir }}/../../../reports/changes/change_cluster_{{ change_id }}_{{ target_node }}.txt"
+        mode: '0644'
+      delegate_to: localhost

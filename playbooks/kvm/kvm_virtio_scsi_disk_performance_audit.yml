@@ -1,0 +1,105 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM VIRTIO-SCSI & VIRTUAL DISK CACHE AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / STORAGE_AUDIT
+# Scope: virtio-scsi vs virtio-blk, cache modes (none/writeback), io threads, discard
+# ==============================================================================
+
+- name: Enterprise KVM Virtual Disk Bus & Cache Mode Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Audit Virtual Machine Disk Target Configurations (virsh domblklist)"
+      ansible.builtin.shell: |
+        vms=$(virsh list --all --name)
+        if [ -z "$vms" ]; then
+          echo "No virtual machines discovered."
+        else
+          for vm in $vms; do
+            echo "=================================================="
+            echo "VM DISK BLOCKS: $vm"
+            echo "=================================================="
+            virsh domblklist "$vm" --details 2>&1 || true
+          done
+        fi
+      register: vm_blk_list
+      changed_when: false
+
+    - name: "3. Audit Virtual Disk Bus Drivers, Cache Modes & Discard Support"
+      ansible.builtin.shell: |
+        vms=$(virsh list --all --name)
+        if [ -n "$vms" ]; then
+          for vm in $vms; do
+            echo "=================================================="
+            echo "VM: $vm DISK DRIVER SPECIFICATIONS"
+            echo "=================================================="
+            virsh dumpxml "$vm" 2>/dev/null | grep -A 4 -E "<driver name='qemu'" || echo "No qemu disk drivers in XML"
+          done
+        fi
+      register: vm_disk_drivers
+      changed_when: false
+
+    - name: "4. Query Hypervisor Block Device I/O Latency (virsh domblkstat)"
+      ansible.builtin.shell: |
+        vms=$(virsh list --state-running --name)
+        if [ -n "$vms" ]; then
+          for vm in $vms; do
+            for dev in $(virsh domblklist "$vm" 2>/dev/null | awk 'NR>2 && $1 != "-" {print $1}'); do
+              echo "--- VM: $vm Device: $dev ---"
+              virsh domblkstat "$vm" "$dev" 2>&1 || true
+            done
+          done
+        else
+          echo "No running VMs to sample block statistics."
+        fi
+      register: vm_blk_stats
+      changed_when: false
+
+    - name: "5. Save Virtio Disk Performance Audit on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM VIRTIO-SCSI & DISK CACHE POLICY AUDIT REPORT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. DOMAIN BLOCK DEVICE TOPOLOGY ---
+          {{ vm_blk_list.stdout }}
+
+          --- 2. CACHE POLICIES & DRIVER SPECIFICATIONS ---
+          {{ vm_disk_drivers.stdout }}
+
+          --- 3. LIVE BLOCK I/O STATISTICS (virsh domblkstat) ---
+          {{ vm_blk_stats.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/virtio_scsi_disk_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Virtio Disk Status Summary"
+      ansible.builtin.debug:
+        msg: "Virtio SCSI and disk cache audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/virtio_scsi_disk_audit.txt"

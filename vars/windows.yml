@@ -1,0 +1,21 @@
+# ==============================================================================
+# MICROSOFT WINDOWS SERVER OPERATIONAL & EVIDENCE VARIABLES
+# ==============================================================================
+
+# Event Log Providers
+windows_event_logs:
+  - System
+  - Application
+  - Microsoft-Windows-Kernel-Power
+  - Microsoft-Windows-FailoverClustering/Operational
+
+# Health Check Alert Thresholds
+windows_thresholds:
+  cpu_percent_critical: 90
+  memory_available_mb_warning: 1024
+  disk_free_percent_critical: 10
+  pending_reboot_alert: true
+
+# Evidence Collection Formats
+windows_log_export_format: "EVTX"
+windows_temp_evidence_path: "C:\\Temp\\EvidenceCollection"

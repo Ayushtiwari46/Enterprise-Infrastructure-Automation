@@ -1,0 +1,97 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM CPU PINNING & NUMA TOPOLOGY AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / HYPERVISOR_TUNING
+# Scope: virsh vcpupin, numactl -H, virsh numatune, hyperthreading, NUMA hit/miss
+# ==============================================================================
+
+- name: Enterprise KVM vCPU Pinning & NUMA Memory Affinity Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Inspect Physical Host NUMA Topology (numactl -H)"
+      ansible.builtin.shell: |
+        if command -v numactl >/dev/null 2>&1; then
+          numactl -H
+        else
+          lscpu | grep -i numa || echo "Single NUMA node or numactl unavailable"
+        fi
+      register: host_numa_topology
+      changed_when: false
+
+    - name: "3. Check Host NUMA Memory Hit / Miss Statistics (numastat)"
+      ansible.builtin.shell: |
+        if command -v numastat >/dev/null 2>&1; then
+          numastat -c 2>/dev/null || numastat
+        else
+          echo "numastat command unavailable"
+        fi
+      register: numastat_metrics
+      changed_when: false
+
+    - name: "4. Audit VM vCPU Pinning & Affinity (virsh vcpuinfo / vcpupin)"
+      ansible.builtin.shell: |
+        vms=$(virsh list --state-running --name)
+        if [ -z "$vms" ]; then
+          echo "No active running VMs to evaluate."
+        else
+          for vm in $vms; do
+            echo "=================================================="
+            echo "VM: $vm vCPU PINNING MAPPING"
+            echo "=================================================="
+            virsh vcpupin "$vm" 2>&1 || true
+            echo "--- NUMA Tuning (virsh numatune) ---"
+            virsh numatune "$vm" 2>&1 || true
+          done
+        fi
+      register: vm_pinning_audit
+      changed_when: false
+
+    - name: "5. Save CPU Pinning & NUMA Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM VCPU PINNING & NUMA TOPOLOGY AUDIT REPORT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. PHYSICAL HOST NUMA TOPOLOGY ---
+          {{ host_numa_topology.stdout }}
+
+          --- 2. NUMA MEMORY HIT / MISS RATIOS ---
+          {{ numastat_metrics.stdout }}
+
+          --- 3. PER-VM VCPU PINNING & NUMATUNE AFFINITIES ---
+          {{ vm_pinning_audit.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/cpu_pinning_numa_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display CPU & NUMA Summary"
+      ansible.builtin.debug:
+        msg: "vCPU pinning and NUMA audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/cpu_pinning_numa_audit.txt"

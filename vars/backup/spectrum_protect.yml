@@ -1,0 +1,9 @@
+# ==============================================================================
+# IBM SPECTRUM PROTECT (TSM) BACKUP VARIABLES
+# ==============================================================================
+tsm_dsmc_bin: "/usr/bin/dsmc"
+tsm_opt_file: "/opt/tivoli/tsm/client/ba/bin/dsm.opt"
+tsm_sys_file: "/opt/tivoli/tsm/client/ba/bin/dsm.sys"
+tsm_dsmsched_log: "/opt/tivoli/tsm/client/ba/bin/dsmsched.log"
+tsm_dsmerror_log: "/opt/tivoli/tsm/client/ba/bin/dsmerror.log"
+tsm_max_acceptable_return_code: 4

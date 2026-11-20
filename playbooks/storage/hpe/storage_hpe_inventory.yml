@@ -1,0 +1,82 @@
+---
+# ==============================================================================
+# PLAYBOOK: storage_hpe_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: HPE Primera, 3PAR StoreServ, Alletra 9000 (WSAPI REST)
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: HPE Primera / 3PAR / Alletra Storage Array Inventory
+  hosts: hpe_storage:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/hpe.yml
+
+  vars:
+    hpe_host: "{{ ansible_host | default('10.100.80.21') }}"
+    hpe_user: "{{ storage_user | default('3paradm') }}"
+    hpe_password: "{{ storage_pass | default('3parpass') }}"
+
+  tasks:
+    - name: 1. Query HPE Array System Information via WSAPI
+      ansible.builtin.uri:
+        url: "https://{{ hpe_host }}:{{ hpe_storage_rest_port }}/api/v1/system"
+        method: GET
+        user: "{{ hpe_user }}"
+        password: "{{ hpe_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: hpe_system_raw
+      ignore_errors: true
+
+    - name: 2. Query Common Provisioning Groups (CPGs)
+      ansible.builtin.uri:
+        url: "https://{{ hpe_host }}:{{ hpe_storage_rest_port }}/api/v1/cpgs"
+        method: GET
+        user: "{{ hpe_user }}"
+        password: "{{ hpe_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: hpe_cpgs_raw
+      ignore_errors: true
+
+    - name: 3. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save HPE Storage Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === HPE PRIMERA / 3PAR STORAGE INVENTORY: {{ inventory_hostname }} ===
+          Endpoint: {{ hpe_host }}
+          
+          --- SYSTEM SPECIFICATION ---
+          {{ hpe_system_raw.json | default(hpe_system_raw.content | default('WSAPI query unavailable or mock environment')) }}
+          
+          --- COMMON PROVISIONING GROUPS (CPGs) ---
+          {{ hpe_cpgs_raw.json | default(hpe_cpgs_raw.content | default('CPG query unavailable')) }}
+        dest: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}/hpe_storage_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display HPE Storage Inventory Status
+      ansible.builtin.debug:
+        msg: "HPE Storage inventory complete for {{ inventory_hostname }}."

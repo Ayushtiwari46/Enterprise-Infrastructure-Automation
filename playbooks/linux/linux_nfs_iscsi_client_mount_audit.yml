@@ -1,0 +1,107 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX NFS & ISCSI CLIENT STORAGE MOUNT AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / STORAGE_DIAGNOSTICS
+# Scope: NFS v3/v4 mounts, rsize/wsize, stale handles, iscsiadm sessions, portals
+# ==============================================================================
+
+- name: Enterprise Linux NFS & iSCSI Client Storage Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Discover Active NFS Mounts & Parameters (/proc/mounts)"
+      ansible.builtin.shell: |
+        grep -E "(nfs|nfs4) " /proc/mounts 2>/dev/null || echo "No active NFS mounts found."
+      register: nfs_mounts
+      changed_when: false
+
+    - name: "3. Check NFS Client RPC Statistics (nfsstat -m)"
+      ansible.builtin.shell: |
+        if command -v nfsstat >/dev/null 2>&1; then
+          nfsstat -m 2>&1
+        else
+          echo "nfsstat command not available"
+        fi
+      register: nfs_stats
+      changed_when: false
+
+    - name: "4. Test NFS Mounts for Stale File Handles"
+      ansible.builtin.shell: |
+        grep -E "(nfs|nfs4) " /proc/mounts | awk '{print $2}' | while read -r mnt; do
+          if timeout 5 stat -t "$mnt" >/dev/null 2>&1; then
+            echo "[OK] Mount responsive: $mnt"
+          else
+            echo "[CRITICAL STALE/HUNG] Mount unresponsive: $mnt"
+          fi
+        done || echo "No NFS mounts to evaluate."
+      register: nfs_stale_test
+      changed_when: false
+
+    - name: "5. Discover Active iSCSI Sessions (iscsiadm -m session)"
+      ansible.builtin.shell: |
+        if command -v iscsiadm >/dev/null 2>&1; then
+          iscsiadm -m session -P 3 2>/dev/null || echo "No active iSCSI sessions"
+        else
+          echo "iscsiadm not installed"
+        fi
+      register: iscsi_sessions
+      changed_when: false
+
+    - name: "6. Check iSCSI Initiator Name"
+      ansible.builtin.shell: |
+        cat /etc/iscsi/initiatorname.iscsi 2>/dev/null || echo "initiatorname.iscsi not found"
+      register: iscsi_iqn
+      changed_when: false
+
+    - name: "7. Save Storage Client Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX NFS & ISCSI CLIENT STORAGE MOUNT AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          iSCSI IQN         : {{ iscsi_iqn.stdout }}
+          ==============================================================================
+
+          --- 1. ACTIVE NFS MOUNTS ---
+          {{ nfs_mounts.stdout }}
+
+          --- 2. NFS RPC PARAMETERS & STATS ---
+          {{ nfs_stats.stdout }}
+
+          --- 3. NFS MOUNT RESPONSIVENESS (STALE CHECK) ---
+          {{ nfs_stale_test.stdout }}
+
+          --- 4. ISCSI SESSIONS & TARGET PORTALS ---
+          {{ iscsi_sessions.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/nfs_iscsi_client_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display Storage Mount Status"
+      ansible.builtin.debug:
+        msg: "Storage client audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/nfs_iscsi_client_audit.txt"

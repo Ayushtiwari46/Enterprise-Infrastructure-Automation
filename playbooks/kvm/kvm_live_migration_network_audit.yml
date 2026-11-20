@@ -1,0 +1,94 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM LIVE MIGRATION NETWORK & TLS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / HYPERVISOR_AUDIT
+# Scope: Migration interface IP, MTU 9000, libvirtd TLS certs, latency, ports
+# ==============================================================================
+
+- name: Enterprise KVM Live Migration Network & TLS Encryption Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Verify Libvirtd Migration Port Availability (Ports 49152-49215)"
+      ansible.builtin.shell: |
+        ss -tulnp | grep -E "(libvirtd|qemu)" || echo "No active libvirt migration listening ports."
+      register: migration_ports
+      changed_when: false
+
+    - name: "3. Inspect Libvirt TLS / SASL Configuration in /etc/libvirt/libvirtd.conf"
+      ansible.builtin.shell: |
+        grep -v -E "^(#|$)" /etc/libvirt/libvirtd.conf 2>/dev/null || echo "Default libvirtd.conf configuration"
+      register: libvirtd_conf
+      changed_when: false
+
+    - name: "4. Check Libvirt PKI TLS Certificates (/etc/pki/CA and /etc/pki/libvirt)"
+      ansible.builtin.shell: |
+        echo "=== CA CERTIFICATE ==="
+        ls -la /etc/pki/CA/ 2>/dev/null || true
+        echo -e "\n=== SERVER CERTIFICATE ==="
+        ls -la /etc/pki/libvirt/ 2>/dev/null || true
+        echo -e "\n=== CLIENT CERTIFICATE ==="
+        ls -la /etc/pki/libvirt/client/ 2>/dev/null || true
+      register: tls_certs
+      changed_when: false
+
+    - name: "5. Audit MTU Configuration across Hypervisor Physical Links"
+      ansible.builtin.shell: |
+        ip -o link show | awk -F': ' '{print $2}' | while read -r iface; do
+          mtu=$(ip link show "$iface" | awk '/mtu/ {print $5}')
+          echo "$iface : MTU $mtu"
+        done
+      register: interface_mtus
+      changed_when: false
+
+    - name: "6. Save Live Migration Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM LIVE MIGRATION NETWORK & TLS ENCRYPTION AUDIT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. LIBVIRTD LISTENING & MIGRATION PORTS ---
+          {{ migration_ports.stdout }}
+
+          --- 2. ACTIVE /etc/libvirt/libvirtd.conf DIRECTIVES ---
+          {{ libvirtd_conf.stdout }}
+
+          --- 3. PKI TLS CERTIFICATE AUDIT ---
+          {{ tls_certs.stdout }}
+
+          --- 4. INTERFACE MTU SIZES ---
+          {{ interface_mtus.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/live_migration_network_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Migration Network Summary"
+      ansible.builtin.debug:
+        msg: "Live migration network audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/live_migration_network_audit.txt"

@@ -1,0 +1,70 @@
+---
+# ==============================================================================
+# PLAYBOOK: cluster_ibm_powerha_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: IBM PowerHA SystemMirror 7.x on IBM AIX
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM PowerHA SystemMirror Cluster Topology, Heartbeat, and Resource Group Audit
+  hosts: powerha_nodes:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/clustering/powerha.yml
+
+  tasks:
+    - name: 1. Query PowerHA Cluster Manager Subsystem State (lssrc -g cluster)
+      ansible.builtin.command:
+        cmd: lssrc -g cluster
+      register: powerha_subsystems_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query PowerHA Cluster State and Node Status (cltopinfo / clstat)
+      ansible.builtin.command:
+        cmd: /usr/es/sbin/cluster/utilities/cltopinfo
+      register: powerha_topinfo
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Resource Group Online/Offline States (clshowres)
+      ansible.builtin.command:
+        cmd: /usr/es/sbin/cluster/utilities/clshowres
+      register: powerha_res_groups
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save PowerHA Cluster Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM POWERHA CLUSTER AUDIT: {{ inventory_hostname }} ===
+          
+          --- CLUSTER DAEMON SUBSYSTEMS (lssrc -g cluster) ---
+          {{ powerha_subsystems_raw.stdout | default('Cluster subsystems query unavailable or mock environment') }}
+          
+          --- CLUSTER TOPOLOGY & HEARTBEAT INTERFACES (cltopinfo) ---
+          {{ powerha_topinfo.stdout | default('cltopinfo utility not present') }}
+          
+          --- RESOURCE GROUPS & SERVICE IP ALLOCATION (clshowres) ---
+          {{ powerha_res_groups.stdout | default('clshowres query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/powerha_cluster_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display PowerHA Cluster Status
+      ansible.builtin.debug:
+        msg: "PowerHA cluster audit complete for node {{ inventory_hostname }}."

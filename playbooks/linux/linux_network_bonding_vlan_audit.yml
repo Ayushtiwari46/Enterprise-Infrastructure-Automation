@@ -1,0 +1,102 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX NETWORK BONDING & VLAN TOPOLOGY AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / NETWORK_DIAGNOSTICS
+# Scope: /proc/net/bonding, LACP 802.3ad, active-backup, VLAN tags, MTU, carrier
+# ==============================================================================
+
+- name: Enterprise Linux Network Bonding & VLAN Topology Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Inspect Linux Bonding Subsystem (/proc/net/bonding)"
+      ansible.builtin.shell: |
+        if [ -d /proc/net/bonding ] && [ "$(ls -A /proc/net/bonding)" ]; then
+          for bond in /proc/net/bonding/*; do
+            echo "=================================================="
+            echo "BOND INTERFACE: $(basename "$bond")"
+            echo "=================================================="
+            cat "$bond"
+          done
+        else
+          echo "No active kernel bond interfaces detected in /proc/net/bonding."
+        fi
+      register: bonding_status
+      changed_when: false
+
+    - name: "3. Audit Network Interfaces Link and Carrier State (ip -d link)"
+      ansible.builtin.shell: |
+        ip -d link show
+      register: ip_link_detail
+      changed_when: false
+
+    - name: "4. Identify Discovered 802.1Q VLAN Interfaces"
+      ansible.builtin.shell: |
+        ip -d link show type vlan 2>/dev/null || echo "No 802.1q VLAN sub-interfaces configured"
+      register: vlan_interfaces
+      changed_when: false
+
+    - name: "5. Audit Network Teaming Status (teamdctl)"
+      ansible.builtin.shell: |
+        if command -v teamdctl >/dev/null 2>&1; then
+          for team in $(ip -o link show type team | awk -F': ' '{print $2}'); do
+            echo "=== TEAM: $team ==="
+            teamdctl "$team" state
+          done
+        else
+          echo "teamdctl not installed or not in use"
+        fi
+      register: teamd_status
+      changed_when: false
+
+    - name: "6. Save Bonding & VLAN Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX NETWORK BONDING & VLAN TOPOLOGY AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. BONDING INTERFACES STATUS (/proc/net/bonding) ---
+          {{ bonding_status.stdout }}
+
+          --- 2. DETAILED IP LINK ATTRIBUTES ---
+          {{ ip_link_detail.stdout }}
+
+          --- 3. 802.1Q VLAN SUB-INTERFACES ---
+          {{ vlan_interfaces.stdout }}
+
+          --- 4. NETWORK TEAMING STATUS ---
+          {{ teamd_status.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/network_bonding_vlan_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Network Topology Summary"
+      ansible.builtin.debug:
+        msg: "Bonding and VLAN audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/network_bonding_vlan_audit.txt"

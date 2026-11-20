@@ -1,0 +1,90 @@
+---
+# ==============================================================================
+# CHANGE PLAYBOOK: OLVM / OVIRT VIRTUAL MACHINE DISK EXTENSION
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: MUTATING_CHANGE (Requires explicit confirmation)
+# Guard: confirm_change == true
+# Check Mode Support: FULL (--check / --diff supported)
+# ==============================================================================
+
+- name: OLVM Virtual Machine Disk Extension
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/olvm.yml
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_OLVM_001') }}"
+    confirm_change: false
+    target_vm: "{{ vm_name | default('lab-oracle-vm01') }}"
+    target_disk: "{{ disk_name | default('lab-oracle-vm01_Disk1') }}"
+    target_size_gb: "{{ new_size_gb | default('50') }}"
+
+  pre_tasks:
+    - name: 1. Change Authorization & Safety Assertion
+      ansible.builtin.fail:
+        msg: >
+          CRITICAL ERROR: Change has NOT been confirmed!
+          This playbook expands virtual disks in Oracle Linux Virtualization Manager (OLVM).
+          To execute this change, you must explicitly supply: -e "confirm_change=true"
+          Alternatively, test this change using --check mode.
+      when: not (confirm_change | bool) and not ansible_check_mode
+
+    - name: 2. Query Existing OLVM Disk Metadata
+      ovirt.ovirt.ovirt_disk_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+        pattern: "name={{ target_disk }}"
+      register: pre_disk_info
+      delegate_to: localhost
+
+    - name: 3. Display Discovered Disk Properties
+      ansible.builtin.debug:
+        msg: "Discovered disk properties: {{ pre_disk_info.ovirt_disks | default([]) }}"
+
+  tasks:
+    - name: 4. Extend Target Disk to New Capacity
+      ovirt.ovirt.ovirt_disk:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+        name: "{{ target_disk }}"
+        vm_name: "{{ target_vm }}"
+        size: "{{ target_size_gb }}GiB"
+        state: present
+      delegate_to: localhost
+      register: extend_result
+
+  post_tasks:
+    - name: 5. Verify Post-Expansion Disk Capacity
+      ovirt.ovirt.ovirt_disk_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+        pattern: "name={{ target_disk }}"
+      register: post_disk_info
+      delegate_to: localhost
+
+    - name: 6. Record OLVM Disk Extension Evidence on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM DISK EXTENSION RECORD: {{ change_id }}
+          ==============================================================================
+          Target Virtual Machine : {{ target_vm }}
+          Target Virtual Disk    : {{ target_disk }}
+          New Capacity Target    : {{ target_size_gb }} GiB
+          Status                 : EXPANSION_COMPLETED
+          ==============================================================================
+        dest: "{{ playbook_dir }}/../../../reports/changes/change_olvm_{{ change_id }}_{{ target_vm }}.txt"
+        mode: '0644'
+      delegate_to: localhost

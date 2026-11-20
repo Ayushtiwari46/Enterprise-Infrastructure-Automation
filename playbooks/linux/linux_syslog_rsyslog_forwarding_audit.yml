@@ -1,0 +1,90 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX SYSLOG & RSYSLOG REMOTE FORWARDING AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / LOGGING_AUDIT
+# Scope: rsyslog/syslog-ng daemon, /etc/rsyslog.conf, SIEM targets, queue buffers
+# ==============================================================================
+
+- name: Enterprise Linux Syslog & Remote Forwarding Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Verify Syslog Daemon State (rsyslog / syslog-ng / systemd-journald)"
+      ansible.builtin.shell: |
+        systemctl status rsyslog --no-pager 2>&1 || systemctl status syslog-ng --no-pager 2>&1 || systemctl status systemd-journald --no-pager 2>&1
+      register: syslog_service_status
+      changed_when: false
+
+    - name: "3. Inspect Rsyslog Remote Forwarding Rules (@ / @@ targets)"
+      ansible.builtin.shell: |
+        if [ -f /etc/rsyslog.conf ]; then
+          grep -E "(@[0-9a-zA-Z]|action\(type=\"omfwd\"|target=)" /etc/rsyslog.conf /etc/rsyslog.d/*.conf 2>/dev/null || echo "No remote syslog forwarding targets configured."
+        else
+          echo "/etc/rsyslog.conf not found"
+        fi
+      register: rsyslog_forwarding_rules
+      changed_when: false
+
+    - name: "4. Audit Systemd Journal Remote Forwarding (systemd-journal-upload)"
+      ansible.builtin.shell: |
+        systemctl status systemd-journal-upload --no-pager 2>&1 || echo "systemd-journal-upload inactive"
+      register: journal_upload_status
+      changed_when: false
+
+    - name: "5. Audit Local Log Retention Configuration in /etc/logrotate.d/syslog"
+      ansible.builtin.shell: |
+        cat /etc/logrotate.d/syslog 2>/dev/null || cat /etc/logrotate.d/rsyslog 2>/dev/null || echo "logrotate syslog definition missing"
+      register: logrotate_syslog
+      changed_when: false
+
+    - name: "6. Save Syslog Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX SYSLOG & REMOTE FORWARDING AUDIT REPORT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. SYSLOG DAEMON SERVICE STATUS ---
+          {{ syslog_service_status.stdout }}
+
+          --- 2. REMOTE FORWARDING RULES (SIEM / CENTRAL LOGGING) ---
+          {{ rsyslog_forwarding_rules.stdout }}
+
+          --- 3. SYSTEMD-JOURNAL-UPLOAD STATUS ---
+          {{ journal_upload_status.stdout }}
+
+          --- 4. LOGROTATE SYSLOG DIRECTIVES ---
+          {{ logrotate_syslog.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/syslog_forwarding_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Syslog Audit Summary"
+      ansible.builtin.debug:
+        msg: "Syslog audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/syslog_forwarding_audit.txt"

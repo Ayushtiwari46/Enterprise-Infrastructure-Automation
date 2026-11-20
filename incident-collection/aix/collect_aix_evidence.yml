@@ -1,0 +1,98 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: IBM AIX
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported OS: IBM AIX 6.1, 7.1, 7.2, 7.3
+# ==============================================================================
+
+- name: IBM AIX Incident Evidence Acquisition Engine
+  hosts: aix_enterprise:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/aix.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+    collection_mode: "{{ mode | default('MODE_1') }}"
+    n_days: "{{ days | default(7) | int }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Target Local Evidence Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - aix/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Create Target AIX Staging Directory
+      ansible.builtin.file:
+        path: "/tmp/case_staging_{{ case_id }}"
+        state: directory
+        mode: '0700'
+
+    - name: 3. Capture AIX Error Report (errpt -a)
+      ansible.builtin.shell: |
+        errpt -a > /tmp/case_staging_{{ case_id }}/errpt_detailed.log 2>&1
+        errpt > /tmp/case_staging_{{ case_id }}/errpt_summary.log 2>&1
+      changed_when: false
+
+    - name: 4. Capture AIX Performance Telemetry (vmstat, iostat, svmon, lparstat)
+      ansible.builtin.shell: |
+        vmstat 1 5 > /tmp/case_staging_{{ case_id }}/vmstat.txt 2>&1
+        iostat -DlT 1 5 > /tmp/case_staging_{{ case_id }}/iostat.txt 2>&1
+        svmon -G > /tmp/case_staging_{{ case_id }}/svmon_G.txt 2>&1 || true
+        lparstat 1 5 > /tmp/case_staging_{{ case_id }}/lparstat.txt 2>&1
+      changed_when: false
+
+    - name: 5. Capture AIX LVM and Filesystem Characteristics
+      ansible.builtin.shell: |
+        df -g > /tmp/case_staging_{{ case_id }}/df_g.txt 2>&1
+        lsvg -o | lsvg -i -l > /tmp/case_staging_{{ case_id }}/lsvg_lvs.txt 2>&1
+        lspv > /tmp/case_staging_{{ case_id }}/lspv.txt 2>&1
+      changed_when: false
+
+    - name: 6. Bundle and Fetch AIX Evidence
+      ansible.builtin.shell: |
+        cd /tmp/case_staging_{{ case_id }} && tar -cf ../evidence_{{ inventory_hostname }}.tar *
+      changed_when: false
+
+    - name: 7. Fetch Archive to Controller Vault
+      ansible.builtin.fetch:
+        src: "/tmp/evidence_{{ inventory_hostname }}.tar"
+        dest: "{{ vault_base }}/aix/{{ inventory_hostname }}/evidence_{{ inventory_hostname }}.tar"
+        flat: true
+
+    - name: 8. Unpack and Generate SHA-256 on Controller
+      ansible.builtin.shell: |
+        cd {{ vault_base }}/aix/{{ inventory_hostname }} && tar -xf evidence_{{ inventory_hostname }}.tar && rm -f evidence_{{ inventory_hostname }}.tar
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 9. Clean Up Target Staging
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/case_staging_{{ case_id }}"
+        - "/tmp/evidence_{{ inventory_hostname }}.tar"
+
+    - name: 10. Display AIX Evidence Status
+      ansible.builtin.debug:
+        msg: "AIX evidence collection complete for {{ inventory_hostname }}. Preserved in {{ vault_base }}/"

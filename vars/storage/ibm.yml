@@ -1,0 +1,8 @@
+# ==============================================================================
+# IBM FLASHSYSTEM / SVC STORAGE VARIABLES
+# ==============================================================================
+ibm_storage_cli_port: 22
+ibm_storage_rest_port: 7443
+ibm_capacity_warning_percent: 80
+ibm_capacity_critical_percent: 90
+ibm_flash_endurance_warning_percent: 10  # Flash wear alert when remaining life < 10%

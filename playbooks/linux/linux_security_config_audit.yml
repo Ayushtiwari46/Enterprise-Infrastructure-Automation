@@ -1,0 +1,109 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_security_config_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.stat
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Security, Hardening, and Compliance Baseline Audit
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Check Mandatory Access Control (SELinux / AppArmor)
+      ansible.builtin.command:
+        cmd: getenforce
+      register: selinux_status
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Check AppArmor Status if SELinux Absent
+      ansible.builtin.command:
+        cmd: apparmor_status
+      register: apparmor_status
+      changed_when: false
+      failed_when: false
+      when: selinux_status.rc != 0
+
+    - name: 3. Audit SSH Daemon Security Configuration (/etc/ssh/sshd_config)
+      ansible.builtin.command:
+        cmd: sshd -T
+      register: sshd_runtime_config
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Extract Critical SSH Security Settings
+      ansible.builtin.set_fact:
+        permit_root_login: "{{ sshd_runtime_config.stdout_lines | select('match', '^permitrootlogin') | list | first | default('permitrootlogin unknown') }}"
+        password_authentication: "{{ sshd_runtime_config.stdout_lines | select('match', '^passwordauthentication') | list | first | default('passwordauthentication unknown') }}"
+        max_auth_tries: "{{ sshd_runtime_config.stdout_lines | select('match', '^maxauthtries') | list | first | default('maxauthtries unknown') }}"
+
+    - name: 5. Audit Kernel Network Hardening Parameters (sysctl)
+      ansible.builtin.command:
+        cmd: sysctl net.ipv4.ip_forward net.ipv4.conf.all.rp_filter net.ipv4.conf.all.accept_redirects fs.suid_dumpable
+      register: sysctl_audit
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Audit /etc/sudoers Integrity and Permission
+      ansible.builtin.stat:
+        path: /etc/sudoers
+      register: sudoers_stat
+
+    - name: 7. Audit Firewall Status (firewalld / ufw / nftables)
+      ansible.builtin.command:
+        cmd: firewall-cmd --state
+      register: firewalld_state
+      changed_when: false
+      failed_when: false
+
+    - name: 8. Ensure Controller Security Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 9. Save Security Baseline Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === SECURITY CONFIGURATION AUDIT: {{ inventory_hostname }} ===
+          
+          --- MANDATORY ACCESS CONTROL ---
+          SELinux Status: {{ selinux_status.stdout | default('Not installed') }}
+          AppArmor Status: {{ apparmor_status.stdout | default('Not active') }}
+          
+          --- SSH DAEMON RUNTIME HARDENING ---
+          {{ permit_root_login }}
+          {{ password_authentication }}
+          {{ max_auth_tries }}
+          
+          --- KERNEL SYSCTL SECURITY ATTRIBUTES ---
+          {{ sysctl_audit.stdout | default('sysctl audit failed') }}
+          
+          --- FIREWALL RUNTIME STATE ---
+          Firewalld: {{ firewalld_state.stdout | default('Inactive / Not installed') }}
+          
+          --- PRIVILEGED ACCESS CONTROLS (/etc/sudoers) ---
+          File Exists: {{ sudoers_stat.stat.exists }}
+          File Mode: {{ sudoers_stat.stat.mode }}
+          Owner: {{ sudoers_stat.stat.pw_name }}:{{ sudoers_stat.stat.gr_name }}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/security_config_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Display Security Compliance Summary
+      ansible.builtin.debug:
+        msg: "Security Audit on {{ inventory_hostname }}: MAC={{ selinux_status.stdout | default('None') }}, SSH Root Login={{ permit_root_login }}"

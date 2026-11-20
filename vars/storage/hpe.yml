@@ -1,0 +1,7 @@
+# ==============================================================================
+# HPE 3PAR / PRIMERA / ALLETRA STORAGE VARIABLES
+# ==============================================================================
+hpe_storage_rest_port: 8080
+hpe_cpg_capacity_warning_percent: 80
+hpe_cpg_capacity_critical_percent: 90
+hpe_node_cpu_warning_percent: 85

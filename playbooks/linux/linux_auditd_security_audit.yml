@@ -1,0 +1,111 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX AUDITD & SECURITY AUDIT SUBSYSTEM VERIFICATION
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / SECURITY_AUDIT
+# Scope: auditd daemon, auditctl rules, backlog limit, failure mode, log volume
+# ==============================================================================
+
+- name: Enterprise Linux Auditd Subsystem Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query Auditd Daemon Status and Process State"
+      ansible.builtin.shell: |
+        systemctl status auditd --no-pager 2>&1 || ps -ef | grep "[a]uditd" || echo "auditd_not_running"
+      register: auditd_status
+      changed_when: false
+
+    - name: "3. Query Active Audit Subsystem Status (auditctl -s)"
+      ansible.builtin.shell: |
+        if command -v auditctl >/dev/null 2>&1; then
+          auditctl -s
+        else
+          echo "auditctl_command_unavailable"
+        fi
+      register: auditctl_status
+      changed_when: false
+
+    - name: "4. Query Loaded Audit Rules List (auditctl -l)"
+      ansible.builtin.shell: |
+        if command -v auditctl >/dev/null 2>&1; then
+          auditctl -l | head -n 50
+        else
+          echo "No audit rules loaded"
+        fi
+      register: auditctl_rules
+      changed_when: false
+
+    - name: "5. Audit /etc/audit/auditd.conf Critical Directives"
+      ansible.builtin.shell: |
+        if [ -f /etc/audit/auditd.conf ]; then
+          grep -E "(max_log_file|max_log_file_action|space_left_action|admin_space_left_action|disk_full_action)" /etc/audit/auditd.conf
+        else
+          echo "auditd.conf missing"
+        fi
+      register: auditd_conf
+      changed_when: false
+
+    - name: "6. Check Audit Log Disk Consumption in /var/log/audit"
+      ansible.builtin.shell: |
+        if [ -d /var/log/audit ]; then
+          ls -lh /var/log/audit/
+        else
+          echo "/var/log/audit absent"
+        fi
+      register: audit_logs
+      changed_when: false
+
+    - name: "7. Save Auditd Subsystem Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX AUDITD SUBSYSTEM & SECURITY AUDIT REPORT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. AUDITD DAEMON STATUS ---
+          {{ auditd_status.stdout }}
+
+          --- 2. AUDITCTL KERNEL STATUS ---
+          {{ auditctl_status.stdout }}
+
+          --- 3. LOADED AUDIT RULES (First 50) ---
+          {{ auditctl_rules.stdout }}
+
+          --- 4. AUDITD STORAGE POLICIES ---
+          {{ auditd_conf.stdout }}
+
+          --- 5. AUDIT LOG FILES ---
+          {{ audit_logs.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/auditd_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display Auditd Verification Summary"
+      ansible.builtin.debug:
+        msg: "Auditd verification complete for {{ inventory_hostname }}. Report: {{ report_dir }}/auditd_audit.txt"

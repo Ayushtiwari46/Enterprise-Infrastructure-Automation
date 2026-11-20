@@ -1,0 +1,104 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX USER ACCESS, PRIVILEGES & SUDOERS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / SECURITY_AUDIT
+# Scope: /etc/passwd UID 0 accounts, /etc/shadow password aging, sudoers rules
+# ==============================================================================
+
+- name: Enterprise Linux User Access & Sudoers Privilege Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Scan for Non-Root Accounts with UID 0 (Superuser Privilege)"
+      ansible.builtin.shell: |
+        awk -F: '($3 == 0) {print $1, "UID:", $3, "GID:", $4, "Shell:", $7}' /etc/passwd
+      register: uid_zero_accounts
+      changed_when: false
+
+    - name: "3. Identify Active Interactive Accounts (Shell is bash/sh/zsh)"
+      ansible.builtin.shell: |
+        grep -E "(/bin/bash|/bin/sh|/bin/zsh)$" /etc/passwd | awk -F: '{print $1, "UID:", $3, "Home:", $6}'
+      register: interactive_accounts
+      changed_when: false
+
+    - name: "4. Audit Locked / Passwordless Accounts in /etc/shadow"
+      ansible.builtin.shell: |
+        awk -F: '($2 == "" || $2 == "!" || $2 == "*") {print $1, "Status: LOCKED_OR_NO_PASSWORD"}' /etc/shadow 2>/dev/null || echo "Shadow read requires elevated privileges"
+      register: shadow_status
+      changed_when: false
+
+    - name: "5. Audit Sudoers Configuration Rules (/etc/sudoers and /etc/sudoers.d)"
+      ansible.builtin.shell: |
+        echo "=== /etc/sudoers NOPASSWD / ALL RULES ==="
+        grep -v -E "^(#|$)" /etc/sudoers 2>/dev/null || true
+        echo -e "\n=== /etc/sudoers.d/* RULES ==="
+        for f in /etc/sudoers.d/*; do
+          if [ -f "$f" ]; then
+            echo "--- $f ---"
+            cat "$f" | grep -v -E "^(#|$)" || true
+          fi
+        done
+      register: sudoers_rules
+      changed_when: false
+
+    - name: "6. Check SSH Authorized Keys for Root"
+      ansible.builtin.shell: |
+        if [ -f /root/.ssh/authorized_keys ]; then
+          awk '{print $1, $NF}' /root/.ssh/authorized_keys
+        else
+          echo "No /root/.ssh/authorized_keys present"
+        fi
+      register: root_ssh_keys
+      changed_when: false
+
+    - name: "7. Save User Access Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX USER ACCESS & PRIVILEGED ACCOUNTS AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. UID 0 SUPERUSER ACCOUNTS ---
+          {{ uid_zero_accounts.stdout }}
+
+          --- 2. INTERACTIVE LOGIN USERS ---
+          {{ interactive_accounts.stdout }}
+
+          --- 3. SUDO PRIVILEGE RULES ---
+          {{ sudoers_rules.stdout }}
+
+          --- 4. ROOT AUTHORIZED SSH KEYS ---
+          {{ root_ssh_keys.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/user_access_sudoers_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display User Audit Summary"
+      ansible.builtin.debug:
+        msg: "User access audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/user_access_sudoers_audit.txt"

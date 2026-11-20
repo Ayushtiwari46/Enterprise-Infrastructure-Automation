@@ -1,0 +1,80 @@
+---
+# ==============================================================================
+# PLAYBOOK: cluster_ibm_gpfs_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: IBM GPFS / Spectrum Scale 4.x, 5.x on Linux / AIX
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM GPFS / Spectrum Scale Cluster State, Quorum, and NSD Storage Audit
+  hosts: gpfs_nodes:mock_targets
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/clustering/gpfs.yml
+
+  tasks:
+    - name: 1. Query GPFS Daemon State across Cluster Nodes (mmgetstate -a)
+      ansible.builtin.command:
+        cmd: "{{ gpfs_mm_bin_path }}/mmgetstate -a"
+      register: gpfs_state
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query GPFS Cluster Topology and Quorum Nodes (mmlscluster)
+      ansible.builtin.command:
+        cmd: "{{ gpfs_mm_bin_path }}/mmlscluster"
+      register: gpfs_cluster
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Network Shared Disk (NSD) Server and Disk Availability (mmlsdisk)
+      ansible.builtin.command:
+        cmd: "{{ gpfs_mm_bin_path }}/mmlsnsd -M"
+      register: gpfs_nsds
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Query GPFS Filesystem Mount States (mmlsmount all)
+      ansible.builtin.command:
+        cmd: "{{ gpfs_mm_bin_path }}/mmlsmount all -L"
+      register: gpfs_mounts
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 6. Save GPFS Cluster Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM GPFS / SPECTRUM SCALE CLUSTER AUDIT: {{ inventory_hostname }} ===
+          
+          --- CLUSTER DAEMON STATES (mmgetstate -a) ---
+          {{ gpfs_state.stdout | default('GPFS mmgetstate unavailable or mock environment') }}
+          
+          --- CLUSTER QUORUM & CONFIGURATION (mmlscluster) ---
+          {{ gpfs_cluster.stdout | default('mmlscluster output unavailable') }}
+          
+          --- NETWORK SHARED DISKS (NSDs) ---
+          {{ gpfs_nsds.stdout | default('mmlsnsd query unavailable') }}
+          
+          --- GPFS MOUNT TOPOLOGY (mmlsmount) ---
+          {{ gpfs_mounts.stdout | default('mmlsmount query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/gpfs_cluster_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 7. Display GPFS Cluster Status
+      ansible.builtin.debug:
+        msg: "GPFS / Spectrum Scale cluster audit complete for {{ inventory_hostname }}."

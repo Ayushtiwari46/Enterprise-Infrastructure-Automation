@@ -1,0 +1,75 @@
+---
+# ==============================================================================
+# PLAYBOOK: storage_ibm_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: IBM FlashSystem (5000/7000/9000), SAN Volume Controller (SVC)
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM FlashSystem / SVC Enclosure, Canister, and MDisk Inventory
+  hosts: ibm_storage:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/ibm.yml
+
+  vars:
+    ibm_storage_host: "{{ ansible_host | default('10.100.80.11') }}"
+    ibm_storage_user: "{{ storage_user | default('superuser') }}"
+
+  tasks:
+    - name: 1. Query IBM Storage Cluster Identification (lssystem)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ ibm_storage_cli_port }} {{ ibm_storage_user }}@{{ ibm_storage_host }} lssystem -delim :"
+      register: ibm_lssystem
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Storage Enclosures and Canisters (lsenclosure)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ ibm_storage_cli_port }} {{ ibm_storage_user }}@{{ ibm_storage_host }} lsenclosure -delim :"
+      register: ibm_lsenclosure
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Managed Disk Groups / Storage Pools (lsmdiskgrp)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ ibm_storage_cli_port }} {{ ibm_storage_user }}@{{ ibm_storage_host }} lsmdiskgrp -delim :"
+      register: ibm_lsmdiskgrp
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save IBM Storage Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM FLASHSYSTEM / SVC STORAGE INVENTORY: {{ inventory_hostname }} ===
+          Endpoint: {{ ibm_storage_host }}
+          
+          --- SYSTEM IDENTITY (lssystem) ---
+          {{ ibm_lssystem.stdout | default('Cluster CLI query unavailable or mock environment') }}
+          
+          --- ENCLOSURES & CANISTERS (lsenclosure) ---
+          {{ ibm_lsenclosure.stdout | default('Enclosure query unavailable') }}
+          
+          --- STORAGE POOLS / MDISK GROUPS (lsmdiskgrp) ---
+          {{ ibm_lsmdiskgrp.stdout | default('Storage pool query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}/ibm_storage_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display IBM Storage Inventory Status
+      ansible.builtin.debug:
+        msg: "IBM Storage inventory complete for {{ inventory_hostname }}."

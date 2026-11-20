@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# PLAYBOOK: storage_dell_health_capacity.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: Dell PowerStore / PowerMax (REST API)
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Dell PowerStore Storage Pool Health, Battery Backup, and Capacity Audit
+  hosts: dell_storage:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/dell.yml
+
+  vars:
+    dell_host: "{{ ansible_host | default('10.100.80.31') }}"
+    dell_user: "{{ storage_user | default('admin') }}"
+    dell_password: "{{ storage_pass | default('Password123!') }}"
+
+  tasks:
+    - name: 1. Query Hardware Node Health and Battery Backup Units (BBU)
+      ansible.builtin.uri:
+        url: "https://{{ dell_host }}:{{ dell_powerstore_rest_port }}/api/rest/hardware"
+        method: GET
+        user: "{{ dell_user }}"
+        password: "{{ dell_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: dell_hardware_raw
+      ignore_errors: true
+
+    - name: 2. Query Storage Space Metrics and Data Reduction / Savings
+      ansible.builtin.uri:
+        url: "https://{{ dell_host }}:{{ dell_powerstore_rest_port }}/api/rest/space_metrics"
+        method: GET
+        user: "{{ dell_user }}"
+        password: "{{ dell_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: dell_space_raw
+      ignore_errors: true
+
+    - name: 3. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save Dell Health and Capacity Artifact
+      ansible.builtin.copy:
+        content: |
+          === DELL POWERSTORE HEALTH & CAPACITY AUDIT: {{ inventory_hostname }} ===
+          
+          --- HARDWARE NODE & BATTERY BACKUP HEALTH ---
+          {{ dell_hardware_raw.json | default(dell_hardware_raw.content | default('Hardware telemetry unavailable')) }}
+          
+          --- CAPACITY, THIN-PROVISIONING, & DEDUPLICATION RATIOS ---
+          {{ dell_space_raw.json | default(dell_space_raw.content | default('Space metrics unavailable')) }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/dell_health_capacity.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display Dell Health Audit Status
+      ansible.builtin.debug:
+        msg: "Dell Storage health and capacity audit complete for {{ inventory_hostname }}."

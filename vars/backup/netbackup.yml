@@ -1,0 +1,10 @@
+# ==============================================================================
+# VERITAS NETBACKUP VARIABLES
+# ==============================================================================
+nbu_openv_bin: "/usr/openv/netbackup/bin"
+nbu_bpclntcmd_bin: "/usr/openv/netbackup/bin/bpclntcmd"
+nbu_log_dir: "/usr/openv/netbackup/logs"
+nbu_client_daemons:
+  - bpcd
+  - vnetd
+nbu_certificate_expiry_warning_days: 30

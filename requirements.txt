@@ -1,0 +1,27 @@
+# ==============================================================================
+# ENTERPRISE INFRASTRUCTURE PYTHON DEPENDENCY MANIFEST
+# ==============================================================================
+# Compatible with Python 3.12 (Ansible Core Controller Runtime)
+# ==============================================================================
+
+# VMware vSphere SDK
+pyVmomi>=8.0.0.0
+
+# HTTP & REST API Client Libraries (OLVM, Brocade SAN, HPE, Dell)
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Structured Data Parsing & JSON Querying
+jmespath>=1.0.1
+lxml>=5.1.0
+
+# IP Address & Network Filtering
+netaddr>=1.0.0
+
+# SSH Protocol & OpenSSL Cryptography
+paramiko>=3.4.0
+cryptography>=42.0.0
+
+# Microsoft Windows Remote Management (WinRM & PSRP)
+pywinrm>=0.4.3
+pypsrp>=1.0.0

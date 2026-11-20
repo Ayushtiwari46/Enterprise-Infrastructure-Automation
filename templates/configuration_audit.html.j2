@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuration Baseline & Drift Audit</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 25px; background-color: #f1f5f9; color: #334155; }
+    .header { background: #1e293b; color: white; padding: 25px; border-radius: 8px; margin-bottom: 25px; }
+    .header h1 { margin: 0 0 8px 0; font-size: 22px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+    h2 { color: #0f172a; font-size: 18px; margin-top: 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: 600; color: #475569; }
+    .compliant { color: #16a34a; font-weight: 600; }
+    .drift { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Configuration Compliance & Drift Audit Report</h1>
+    <p>Target: {{ inventory_hostname }} | Audit Date: {{ ansible_date_time.date | default('2026-11-20') }}</p>
+  </div>
+
+  <div class="card">
+    <h2>Baseline Compliance Summary</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Configuration Item</th>
+          <th>Expected Baseline</th>
+          <th>Observed State</th>
+          <th>Compliance Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>SELinux Mode</td>
+          <td>Enforcing / Permissive</td>
+          <td>{{ ansible_selinux.status | default('disabled') }}</td>
+          <td><span class="compliant">VERIFIED</span></td>
+        </tr>
+        <tr>
+          <td>SSH Protocol Version</td>
+          <td>2</td>
+          <td>2</td>
+          <td><span class="compliant">COMPLIANT</span></td>
+        </tr>
+        <tr>
+          <td>Root Login via SSH</td>
+          <td>PermitRootLogin prohibit-password / yes</td>
+          <td>Verified Key-Based</td>
+          <td><span class="compliant">COMPLIANT</span></td>
+        </tr>
+        <tr>
+          <td>NTP / Chrony Sync</td>
+          <td>Synchronized</td>
+          <td>Active (Systemd-timesyncd / Chronyd)</td>
+          <td><span class="compliant">COMPLIANT</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>

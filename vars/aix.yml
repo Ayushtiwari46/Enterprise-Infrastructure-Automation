@@ -1,0 +1,24 @@
+# ==============================================================================
+# IBM AIX OPERATIONAL & EVIDENCE VARIABLES
+# ==============================================================================
+
+# AIX Binary & Command Paths
+aix_errpt_path: "/usr/bin/errpt"
+aix_vmstat_path: "/usr/bin/vmstat"
+aix_iostat_path: "/usr/bin/iostat"
+aix_lparstat_path: "/usr/bin/lparstat"
+aix_svmon_path: "/usr/bin/svmon"
+aix_lsvg_path: "/usr/sbin/lsvg"
+aix_lspv_path: "/usr/sbin/lspv"
+
+# Log & Dump Paths
+aix_syslog_path: "/var/log/syslog"
+aix_error_log_path: "/var/adm/ras/errlog"
+aix_dump_dir: "/var/adm/ras"
+
+# Health Check Alert Thresholds
+aix_thresholds:
+  entitled_capacity_warning_percent: 95
+  physical_cpu_consumed_threshold: 0.90
+  paging_space_critical_percent: 40
+  jfs2_filesystem_critical_percent: 90

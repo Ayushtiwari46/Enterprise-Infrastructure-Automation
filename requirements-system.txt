@@ -1,0 +1,35 @@
+# ==============================================================================
+# ENTERPRISE INFRASTRUCTURE CONTROLLER SYSTEM PACKAGES (RPM / DEB)
+# ==============================================================================
+# Essential packages required on the Ansible Automation Controller host.
+# ==============================================================================
+
+# Core Connectivity & Shell Tools
+openssh-clients
+sshpass
+rsync
+curl
+wget
+tar
+gzip
+bzip2
+xz
+jq
+
+# Development & Cryptography Libraries (for wheel compilation if offline)
+gcc
+glibc-devel
+libffi-devel
+openssl-devel
+libxml2-devel
+libxslt-devel
+python3-devel
+
+# Diagnostic & Performance Audit Binaries
+sysstat
+bind-utils
+net-tools
+pciutils
+dmidecode
+lsscsi
+device-mapper-multipath

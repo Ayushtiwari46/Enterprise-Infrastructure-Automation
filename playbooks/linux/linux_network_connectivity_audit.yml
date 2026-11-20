@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_network_connectivity_audit.yml
+# ==============================================================================
+# Operational Category: Health Checks
+# Safety Classification: READ_ONLY
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Network Stack, Interface, and Routing Audit
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Network Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'network'
+
+    - name: 2. Query Kernel IP Routing Table (ip route show)
+      ansible.builtin.command:
+        cmd: ip -4 route show
+      register: ip_route_raw
+      changed_when: false
+
+    - name: 3. Query Network Interface Link Statistics and Packet Drops
+      ansible.builtin.command:
+        cmd: ip -s link show
+      register: ip_link_raw
+      changed_when: false
+
+    - name: 4. Query Listening Ports and Sockets (ss -tulpn)
+      ansible.builtin.command:
+        cmd: ss -tulpn
+      register: ss_raw
+      changed_when: false
+
+    - name: 5. Query Resolv.conf DNS Nameservers
+      ansible.builtin.command:
+        cmd: awk '/^nameserver/ {print $2}' /etc/resolv.conf
+      register: dns_nameservers
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Test Default Gateway Connectivity (Ping 2 packets)
+      ansible.builtin.command:
+        cmd: "ping -c 2 -W 2 {{ ansible_default_ipv4.gateway }}"
+      register: ping_gateway
+      changed_when: false
+      failed_when: false
+      when: ansible_default_ipv4.gateway is defined
+
+    - name: 7. Construct Network Diagnostics Record
+      ansible.builtin.set_fact:
+        net_audit_summary:
+          hostname: "{{ inventory_hostname }}"
+          primary_interface: "{{ ansible_default_ipv4.interface | default('N/A') }}"
+          primary_ip: "{{ ansible_default_ipv4.address | default('N/A') }}"
+          default_gateway: "{{ ansible_default_ipv4.gateway | default('N/A') }}"
+          gateway_reachable: "{{ (ping_gateway.rc | default(1) == 0) | ternary('YES', 'NO') }}"
+          dns_servers: "{{ dns_nameservers.stdout_lines | default([]) }}"
+          total_interfaces: "{{ ansible_interfaces | default([]) | length }}"
+
+    - name: 8. Ensure Controller Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 9. Save Network Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === NETWORK CONNECTIVITY & ROUTING AUDIT: {{ inventory_hostname }} ===
+          
+          --- ROUTING TABLE ---
+          {{ ip_route_raw.stdout }}
+          
+          --- INTERFACE PACKET STATISTICS ---
+          {{ ip_link_raw.stdout }}
+          
+          --- ACTIVE LISTENING SOCKETS (ss -tulpn) ---
+          {{ ss_raw.stdout_lines[:30] | join('\n') }}
+          
+          --- GATEWAY PING TELEMETRY ---
+          {{ ping_gateway.stdout | default('No default gateway configured') }}
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/network_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Display Network Health Status
+      ansible.builtin.debug:
+        var: net_audit_summary

@@ -1,0 +1,88 @@
+---
+# ==============================================================================
+# PLAYBOOK: aix_performance_collection.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported OS: IBM AIX 6.1, 7.1, 7.2, 7.3 (IBM Power Systems)
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM AIX Performance Diagnostics Collection (vmstat, iostat, svmon, lparstat)
+  hosts: aix_enterprise:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/aix.yml
+
+  tasks:
+    - name: 1. Sample CPU and Paging Activity (vmstat 2 5)
+      ansible.builtin.command:
+        cmd: vmstat 2 5
+      register: aix_vmstat
+      changed_when: false
+
+    - name: 2. Sample Disk I-O and Adapter Throughput (iostat -DlT 2 5)
+      ansible.builtin.command:
+        cmd: iostat -DlT 2 5
+      register: aix_iostat
+      changed_when: false
+
+    - name: 3. Capture Global Memory Utilization and Frame Allocation (svmon -G)
+      ansible.builtin.command:
+        cmd: svmon -G
+      register: aix_svmon_g
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Capture Top Memory Consuming Processes (svmon -P -t 10)
+      ansible.builtin.command:
+        cmd: svmon -P -t 10
+      register: aix_svmon_top
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Sample Micro-Partitioning LPAR Statistics (lparstat 2 5)
+      ansible.builtin.command:
+        cmd: lparstat 2 5
+      register: aix_lparstat
+      changed_when: false
+
+    - name: 6. Ensure Controller Performance Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 7. Save AIX Performance Telemetry Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM AIX PERFORMANCE TELEMETRY: {{ inventory_hostname }} ===
+          
+          --- VMSTAT SAMPLING (CPU & VIRTUAL MEMORY) ---
+          {{ aix_vmstat.stdout }}
+          
+          --- IOSTAT SAMPLING (DISK ADAPTERS & PATH LATENCY) ---
+          {{ aix_iostat.stdout }}
+          
+          --- SVMON GLOBAL MEMORY FRAMES (svmon -G) ---
+          {{ aix_svmon_g.stdout | default('svmon unavailable') }}
+          
+          --- SVMON TOP 10 MEMORY CONSUMING PROCESSES ---
+          {{ aix_svmon_top.stdout | default('svmon process query unavailable') }}
+          
+          --- LPARSTAT HYPERVISOR DISPATCH SAMPLING ---
+          {{ aix_lparstat.stdout }}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/aix_performance_report.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 8. Display AIX Performance Telemetry Status
+      ansible.builtin.debug:
+        msg: "Performance collection complete for AIX host {{ inventory_hostname }}. Captured vmstat, iostat, svmon, and lparstat."

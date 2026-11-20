@@ -1,0 +1,32 @@
+# ==============================================================================
+# LINUX OPERATIONAL & EVIDENCE VARIABLES
+# ==============================================================================
+
+# Critical System Log Paths
+linux_log_paths:
+  - /var/log/messages
+  - /var/log/syslog
+  - /var/log/secure
+  - /var/log/auth.log
+  - /var/log/dmesg
+  - /var/log/boot.log
+  - /var/log/cron
+  - /var/log/audit/audit.log
+
+# Performance & Metric Directories
+linux_sar_dir: "/var/log/sa"
+linux_sar_archive_prefix: "sa"
+
+# Health Check Alert Thresholds
+linux_thresholds:
+  cpu_saturation_load_multiplier: 1.5   # Flag if 1-min load > (CPU count * multiplier)
+  memory_utilization_percent: 90       # Alert when used RAM > 90%
+  swap_utilization_percent: 50         # Alert when swap used > 50%
+  filesystem_warning_percent: 85       # Warning when disk space > 85%
+  filesystem_critical_percent: 92      # Critical when disk space > 92%
+  inode_warning_percent: 85            # Warning when inode usage > 85%
+
+# Multipath / SAN Discovery
+linux_multipath_config: "/etc/multipath.conf"
+linux_scsi_sys_path: "/sys/class/scsi_host"
+linux_fc_sys_path: "/sys/class/fc_host"

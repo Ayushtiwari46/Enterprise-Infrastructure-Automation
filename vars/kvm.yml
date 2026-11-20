@@ -1,0 +1,13 @@
+# ==============================================================================
+# ENTERPRISE KVM & LIBVIRT OPERATIONAL VARIABLES
+# ==============================================================================
+
+# Hypervisor Libvirt URI
+kvm_libvirt_uri: "qemu:///system"
+kvm_storage_pool_path: "/var/lib/libvirt/images"
+
+# Health Check & Inspection Thresholds
+kvm_thresholds:
+  vcpu_to_pcpu_ratio_max: 4.0
+  bridge_dropped_packets_alert: 100
+  qemu_io_error_alert: true

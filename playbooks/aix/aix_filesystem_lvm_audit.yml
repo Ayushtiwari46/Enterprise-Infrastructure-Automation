@@ -1,0 +1,101 @@
+---
+# ==============================================================================
+# PLAYBOOK: aix_filesystem_lvm_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported OS: IBM AIX 6.1, 7.1, 7.2, 7.3 (IBM Power Systems)
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: IBM AIX Logical Volume Manager (LVM) and JFS2 Filesystem Audit
+  hosts: aix_enterprise:mock_aix
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/aix.yml
+
+  tasks:
+    - name: 1. Query JFS2 Filesystem Capacity (df -g)
+      ansible.builtin.command:
+        cmd: df -g
+      register: aix_df_g
+      changed_when: false
+
+    - name: 2. Query Active AIX Volume Groups (lsvg -o)
+      ansible.builtin.command:
+        cmd: lsvg -o
+      register: active_vgs
+      changed_when: false
+
+    - name: 3. Query Detailed Volume Group Characteristics
+      ansible.builtin.command:
+        cmd: "lsvg {{ item }}"
+      loop: "{{ active_vgs.stdout_lines }}"
+      register: vg_details
+      changed_when: false
+
+    - name: 4. Check for Stale Physical Partitions (lsvg -p)
+      ansible.builtin.command:
+        cmd: "lsvg -p {{ item }}"
+      loop: "{{ active_vgs.stdout_lines }}"
+      register: vg_pv_status
+      changed_when: false
+
+    - name: 5. Query Logical Volumes in Volume Groups (lsvg -l)
+      ansible.builtin.command:
+        cmd: "lsvg -l {{ item }}"
+      loop: "{{ active_vgs.stdout_lines }}"
+      register: vg_lvs
+      changed_when: false
+
+    - name: 6. Query Physical Volumes Status (lspv)
+      ansible.builtin.command:
+        cmd: lspv
+      register: lspv_raw
+      changed_when: false
+
+    - name: 7. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 8. Save AIX LVM and Filesystem Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === IBM AIX LVM & JFS2 AUDIT: {{ inventory_hostname }} ===
+          
+          --- JFS2 FILESYSTEM CAPACITY (df -g) ---
+          {{ aix_df_g.stdout }}
+          
+          --- PHYSICAL VOLUMES (lspv) ---
+          {{ lspv_raw.stdout }}
+          
+          --- ACTIVE VOLUME GROUPS ---
+          {{ active_vgs.stdout }}
+          
+          --- DETAILED VG STATUS ---
+          {% for r in vg_details.results %}
+          >>> VG: {{ r.item }} <<<
+          {{ r.stdout }}
+          {% endfor %}
+          
+          --- LOGICAL VOLUMES (lsvg -l) ---
+          {% for r in vg_lvs.results %}
+          >>> VG: {{ r.item }} <<<
+          {{ r.stdout }}
+          {% endfor %}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/aix_lvm_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 9. Display AIX LVM Audit Status
+      ansible.builtin.debug:
+        msg: "Audited {{ active_vgs.stdout_lines | length }} active volume groups on AIX host {{ inventory_hostname }}."

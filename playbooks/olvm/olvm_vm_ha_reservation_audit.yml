@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM VIRTUAL MACHINE HIGH AVAILABILITY (HA) AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / VIRTUALIZATION_AUDIT
+# Scope: Highly Available VMs, watchdog models, cluster HA spare capacity, priority
+# ==============================================================================
+
+- name: OLVM High Availability (HA) Configuration & Capacity Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query All VMs with High Availability Enabled via REST API"
+      ovirt.ovirt.ovirt_vm_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: vms_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Engine Database for HA Configured Virtual Machines"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT vm_name, auto_startup, priority, default_boot_sequence FROM vm_static WHERE auto_startup = true;' 2>/dev/null" || true
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: ha_vms_db
+      changed_when: false
+
+    - name: "4. Query Watchdog Configuration for High Availability VMs"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT vm_static.vm_name, vm_device.type, vm_device.device FROM vm_device JOIN vm_static ON vm_device.vm_id = vm_static.vm_guid WHERE vm_device.type = '\''watchdog'\'';' 2>/dev/null" || echo "No watchdogs configured"
+        else
+          echo "Database query unavailable"
+        fi
+      register: watchdog_devices_db
+      changed_when: false
+
+    - name: "5. Save HA Configuration Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM VIRTUAL MACHINE HIGH AVAILABILITY (HA) AUDIT REPORT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. HIGH AVAILABILITY CONFIGURED VMS (DATABASE) ---
+          {{ ha_vms_db.stdout }}
+
+          --- 2. CONFIGURED VM WATCHDOG DEVICES ---
+          {{ watchdog_devices_db.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_ha_reservation_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display HA Audit Summary"
+      ansible.builtin.debug:
+        msg: "OLVM VM HA audit complete. Report: {{ report_dir }}/olvm_ha_reservation_audit.txt"

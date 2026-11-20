@@ -1,0 +1,75 @@
+---
+# ==============================================================================
+# PLAYBOOK: san_cisco_mds_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: Cisco MDS 9000 Series Multilayer Directors (NX-OS)
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Cisco MDS 9000 Series Switch Chassis, Supervisor, and Module Inventory
+  hosts: cisco_mds_san:mock_san
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/networking/cisco.yml
+
+  vars:
+    mds_ip: "{{ ansible_host | default('10.100.85.21') }}"
+    mds_user: "{{ san_user | default('admin') }}"
+
+  tasks:
+    - name: 1. Query Cisco MDS System Version and Chassis Details (show version)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ cisco_mds_ssh_port }} {{ mds_user }}@{{ mds_ip }} show version"
+      register: mds_version
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Supervisor and Linecard Module Status (show module)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ cisco_mds_ssh_port }} {{ mds_user }}@{{ mds_ip }} show module"
+      register: mds_modules
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Active VSAN Membership (show vsan)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ cisco_mds_ssh_port }} {{ mds_user }}@{{ mds_ip }} show vsan"
+      register: mds_vsan
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save Cisco MDS Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === CISCO MDS 9000 SAN SWITCH INVENTORY: {{ inventory_hostname }} ===
+          Endpoint: {{ mds_ip }}
+          
+          --- NX-OS VERSION & CHASSIS SPECS ---
+          {{ mds_version.stdout | default('CLI query unavailable or mock environment') }}
+          
+          --- SUPERVISOR & LINECARD MODULES (show module) ---
+          {{ mds_modules.stdout | default('Module query unavailable') }}
+          
+          --- CONFIGURED VSAN TOPOLOGY (show vsan) ---
+          {{ mds_vsan.stdout | default('VSAN query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/infrastructure-inventory/{{ inventory_hostname }}/cisco_mds_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display Cisco MDS Inventory Status
+      ansible.builtin.debug:
+        msg: "Cisco MDS SAN switch inventory complete for {{ inventory_hostname }}."

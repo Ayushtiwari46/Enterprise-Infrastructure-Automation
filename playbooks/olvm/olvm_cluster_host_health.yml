@@ -1,0 +1,64 @@
+---
+# ==============================================================================
+# PLAYBOOK: olvm_cluster_host_health.yml
+# ==============================================================================
+# Operational Category: Health Checks
+# Safety Classification: READ_ONLY
+# Supported Platforms: Oracle Linux Virtualization Manager (OLVM 4.4, 4.5) / oVirt 4.x
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: OLVM Cluster and Hypervisor Host Health Audit
+  hosts: virtualization_managers:olvm_infrastructure
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    engine_url: "{{ olvm_engine_url | default('https://192.168.242.133/ovirt-engine/api') }}"
+    engine_user: "{{ olvm_user | default('admin@internal') }}"
+    engine_password: "{{ olvm_pass | default('Unknown@56') }}"
+
+  tasks:
+    - name: 1. Query Registered Hypervisor Hosts via REST API
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/hosts"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_hosts_raw
+      ignore_errors: true
+
+    - name: 2. Ensure Controller Health Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 3. Save OLVM Host Health Artifact
+      ansible.builtin.copy:
+        content: |
+          === OLVM CLUSTER HYPERVISOR HEALTH AUDIT: {{ inventory_hostname }} ===
+          Engine Endpoint: {{ engine_url }}
+          
+          --- HYPERVISOR HOST STATUS & SPM STATE ---
+          {{ olvm_hosts_raw.json | default(olvm_hosts_raw.content | default('Failed to query hosts endpoint')) }}
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/olvm_host_health.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Display Host Health Status
+      ansible.builtin.debug:
+        msg: "OLVM host health audit complete for {{ inventory_hostname }}."

@@ -1,0 +1,99 @@
+---
+# ==============================================================================
+# PLAYBOOK: olvm_manager_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported Platforms: Oracle Linux Virtualization Manager (OLVM 4.4, 4.5) / oVirt 4.x
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ovirt.ovirt.ovirt_vm_info
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: OLVM Manager Environment and Infrastructure Inventory
+  hosts: virtualization_managers:olvm_infrastructure
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    engine_url: "{{ olvm_engine_url | default('https://192.168.242.133/ovirt-engine/api') }}"
+    engine_user: "{{ olvm_user | default('admin@internal') }}"
+    engine_password: "{{ olvm_pass | default('Unknown@56') }}"
+
+  tasks:
+    - name: 1. Query OLVM API Entry Point and Version
+      ansible.builtin.uri:
+        url: "{{ engine_url }}"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_api_root
+      ignore_errors: true
+
+    - name: 2. Query OLVM Data Centers
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/datacenters"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_datacenters
+      ignore_errors: true
+
+    - name: 3. Query OLVM Clusters
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/clusters"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_clusters
+      ignore_errors: true
+
+    - name: 4. Ensure Controller Inventory Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save OLVM Manager Inventory Artifact
+      ansible.builtin.copy:
+        content: |
+          === ORACLE LINUX VIRTUALIZATION MANAGER (OLVM) INVENTORY: {{ inventory_hostname }} ===
+          Engine Endpoint: {{ engine_url }}
+          API HTTP Response: {{ olvm_api_root.status | default('Unreachable') }}
+          
+          --- DATACENTERS ---
+          {{ olvm_datacenters.json | default(olvm_datacenters.content | default('Data centers query failed')) }}
+          
+          --- CLUSTERS ---
+          {{ olvm_clusters.json | default(olvm_clusters.content | default('Clusters query failed')) }}
+        dest: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}/olvm_manager_inventory.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display OLVM Inventory Status
+      ansible.builtin.debug:
+        msg: "OLVM Manager Inventory complete for {{ inventory_hostname }}. Status={{ olvm_api_root.status | default('N/A') }}"

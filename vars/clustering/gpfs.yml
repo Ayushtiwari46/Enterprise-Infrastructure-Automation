@@ -1,0 +1,7 @@
+# ==============================================================================
+# IBM GPFS / SPECTRUM SCALE CLUSTER VARIABLES
+# ==============================================================================
+gpfs_mm_bin_path: "/usr/lpp/mmfs/bin"
+gpfs_daemon_name: "mmfsd"
+gpfs_quorum_min_nodes_percent: 51
+gpfs_disk_down_alert: true

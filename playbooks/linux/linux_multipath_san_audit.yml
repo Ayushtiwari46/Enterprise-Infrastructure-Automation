@@ -1,0 +1,105 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_multipath_san_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.find
+#   - ansible.builtin.stat
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Multipath Daemon and SAN HBA Storage Audit
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Verify Device-Mapper Multipath Binary
+      ansible.builtin.command:
+        cmd: which multipath
+      register: multipath_which
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Multipath Topology and Failed Paths (multipath -ll)
+      ansible.builtin.command:
+        cmd: multipath -ll
+      register: multipath_ll
+      changed_when: false
+      failed_when: false
+      when: multipath_which.rc == 0
+
+    - name: 3. Query Multipath Daemon Status
+      ansible.builtin.command:
+        cmd: systemctl status multipathd --no-pager
+      register: multipathd_status
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Discover Fibre Channel Host Adapters (/sys/class/fc_host)
+      ansible.builtin.find:
+        paths: "{{ linux_fc_sys_path }}"
+        file_type: any
+        recurse: false
+      register: fc_hosts
+      failed_when: false
+
+    - name: 5. Query FC Port WWPN and Port States
+      ansible.builtin.command:
+        cmd: "cat {{ item.path }}/port_name {{ item.path }}/port_state {{ item.path }}/speed"
+      loop: "{{ fc_hosts.files | default([]) }}"
+      register: fc_port_details
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Query SCSI LUNs and Disk Inquiries (lsscsi)
+      ansible.builtin.command:
+        cmd: lsscsi -t
+      register: lsscsi_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 7. Inspect /etc/multipath.conf Integrity
+      ansible.builtin.stat:
+        path: "{{ linux_multipath_config }}"
+      register: multipath_conf_stat
+
+    - name: 8. Ensure Controller Storage Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 9. Save Multipath & SAN Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === MULTIPATH & SAN STORAGE AUDIT: {{ inventory_hostname }} ===
+          
+          --- MULTIPATH TOPOLOGY (multipath -ll) ---
+          {{ multipath_ll.stdout | default('Device-mapper multipath not configured or no active maps.') }}
+          
+          --- MULTIPATH DAEMON STATUS ---
+          {{ multipathd_status.stdout | default('multipathd service not running') }}
+          
+          --- FIBRE CHANNEL HBA PORTS ---
+          Detected FC Hosts: {{ fc_hosts.matched | default(0) }}
+          
+          --- SCSI DEVICE LIST (lsscsi -t) ---
+          {{ lsscsi_raw.stdout | default('lsscsi utility not installed') }}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/multipath_san_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Display SAN Discovery Status
+      ansible.builtin.debug:
+        msg: "Host {{ inventory_hostname }}: Multipath available={{ multipath_which.rc == 0 }}, FC Adapters={{ fc_hosts.matched | default(0) }}"

@@ -1,0 +1,95 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_hardware_inventory.yml
+# ==============================================================================
+# Operational Category: Infrastructure Inventory
+# Safety Classification: READ_ONLY
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.copy
+#   - ansible.builtin.file
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Hardware and Firmware Inventory
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Hardware Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'hardware'
+          - 'processor'
+
+    - name: 2. Query SMBIOS / DMI System Information
+      ansible.builtin.command:
+        cmd: dmidecode -t system
+      register: dmi_system
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query BIOS and Firmware Revision
+      ansible.builtin.command:
+        cmd: dmidecode -t bios
+      register: dmi_bios
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Query PCI Devices and Host Bus Adapters
+      ansible.builtin.command:
+        cmd: lspci -nn
+      register: lspci_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Query CPU Architecture and Virtualization Flags
+      ansible.builtin.command:
+        cmd: lscpu
+      register: lscpu_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Detect Hypervisor / Virtualization Environment
+      ansible.builtin.command:
+        cmd: systemd-detect-virt
+      register: virt_detect
+      changed_when: false
+      failed_when: false
+
+    - name: 7. Construct Hardware Inventory Record
+      ansible.builtin.set_fact:
+        hardware_inventory:
+          hostname: "{{ inventory_hostname }}"
+          virtualization_type: "{{ virt_detect.stdout | default(ansible_virtualization_type | default('baremetal')) }}"
+          processor_vcpus: "{{ ansible_processor_vcpus | default(ansible_processor_count | default('N/A')) }}"
+          processor_cores: "{{ ansible_processor_cores | default('N/A') }}"
+          processor_model: "{{ ansible_processor[1] | default(ansible_processor[0] | default('N/A')) }}"
+          system_memory_mb: "{{ ansible_memtotal_mb | default('N/A') }}"
+          pci_device_count: "{{ lspci_raw.stdout_lines | default([]) | length }}"
+          dmi_system_summary: "{{ dmi_system.stdout_lines | default(['dmidecode unavailable']) | slice(15) | first }}"
+          dmi_bios_summary: "{{ dmi_bios.stdout_lines | default(['BIOS unavailable']) | slice(10) | first }}"
+
+    - name: 8. Ensure Inventory Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 9. Save Hardware Inventory Artifact
+      ansible.builtin.copy:
+        content: "{{ hardware_inventory | to_nice_yaml }}"
+        dest: "{{ playbook_dir }}/../../reports/infrastructure-inventory/{{ inventory_hostname }}/hardware_inventory.yml"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 10. Display Hardware Inventory Summary
+      ansible.builtin.debug:
+        msg: "Host {{ inventory_hostname }}: {{ hardware_inventory.virtualization_type }} | {{ hardware_inventory.processor_vcpus }} vCPUs | {{ hardware_inventory.system_memory_mb }} MB RAM"

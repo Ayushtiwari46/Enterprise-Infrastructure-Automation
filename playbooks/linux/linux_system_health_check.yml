@@ -1,0 +1,106 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_system_health_check.yml
+# ==============================================================================
+# Operational Category: Health Check
+# Safety Classification: READ_ONLY
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux 7/8/9, SLES 12/15, Ubuntu 18/20/22/24
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.stat
+#   - ansible.builtin.debug
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+# ==============================================================================
+
+- name: Linux Enterprise System Health Check
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Minimal Essential Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'min'
+          - 'distribution'
+          - 'loadavg'
+          - 'hardware'
+
+    - name: 2. Capture Kernel Release and Architecture
+      ansible.builtin.command:
+        cmd: uname -a
+      register: uname_output
+      changed_when: false
+
+    - name: 3. Capture System Uptime and Load Average
+      ansible.builtin.command:
+        cmd: uptime
+      register: uptime_raw
+      changed_when: false
+
+    - name: 4. Check for Unkillable (D-State) or Zombie (Z-State) Processes
+      ansible.builtin.command:
+        cmd: ps -eo stat,pid,user,comm
+      register: ps_output
+      changed_when: false
+
+    - name: 5. Filter Problematic Process States
+      ansible.builtin.set_fact:
+        zombie_processes: "{{ ps_output.stdout_lines | select('match', '^Z') | list }}"
+        d_state_processes: "{{ ps_output.stdout_lines | select('match', '^D') | list }}"
+
+    - name: 6. Check Kernel Ring Buffer for Hardware/I-O Errors
+      ansible.builtin.command:
+        cmd: dmesg -T
+      register: dmesg_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 7. Inspect /proc/sys/kernel/tainted
+      ansible.builtin.command:
+        cmd: cat /proc/sys/kernel/tainted
+      register: kernel_tainted
+      changed_when: false
+      failed_when: false
+
+    - name: 8. Evaluate Memory and Swap Thresholds
+      ansible.builtin.set_fact:
+        ram_used_percent: "{{ ((ansible_memtotal_mb - ansible_memfree_mb) / ansible_memtotal_mb * 100) | round(1) }}"
+        swap_used_percent: "{{ (ansible_swaptotal_mb > 0) | ternary(((ansible_swaptotal_mb - ansible_swapfree_mb) / ansible_swaptotal_mb * 100) | round(1), 0) }}"
+
+    - name: 9. Compile System Health Status Record
+      ansible.builtin.set_fact:
+        health_summary:
+          hostname: "{{ inventory_hostname }}"
+          os_distribution: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+          kernel: "{{ uname_output.stdout.split()[2] }}"
+          uptime: "{{ uptime_raw.stdout.strip() }}"
+          load_average: "{{ ansible_loadavg }}"
+          ram_utilization_percent: "{{ ram_used_percent }}"
+          swap_utilization_percent: "{{ swap_used_percent }}"
+          zombie_process_count: "{{ zombie_processes | length }}"
+          d_state_process_count: "{{ d_state_processes | length }}"
+          kernel_tainted_flag: "{{ kernel_tainted.stdout | default('0') }}"
+
+    - name: 10. Display System Health Summary
+      ansible.builtin.debug:
+        var: health_summary
+
+    - name: 11. Ensure Controller Host Health Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 12. Save Health Check Audit Artifact on Controller
+      ansible.builtin.copy:
+        content: "{{ health_summary | to_nice_yaml }}"
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/system_health.yml"
+        mode: '0644'
+      delegate_to: localhost

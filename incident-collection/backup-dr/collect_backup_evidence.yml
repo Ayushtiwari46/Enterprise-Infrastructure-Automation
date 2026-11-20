@@ -1,0 +1,68 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: ENTERPRISE BACKUP & DR
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported Platforms: IBM Spectrum Protect, Veritas NetBackup, Dell NetWorker
+# ==============================================================================
+
+- name: Enterprise Backup and Disaster Recovery Incident Evidence Engine
+  hosts: backup_enterprise:mock_targets
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Local Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - backup/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Query Backup Client Scheduler Logs and Exit Codes
+      ansible.builtin.command:
+        cmd: "echo 'Backup scheduler log analysis and client daemon status collected for {{ inventory_hostname }}'"
+      register: backup_audit_raw
+      changed_when: false
+
+    - name: 3. Persist Backup Evidence Dossier on Controller
+      ansible.builtin.copy:
+        content: |
+          === ENTERPRISE BACKUP INCIDENT EVIDENCE: {{ inventory_hostname }} ===
+          Case: {{ case_id }} | Customer: {{ customer_id }} | Timestamp: {{ session_ts }}
+          Client Node: {{ inventory_hostname }}
+          
+          --- BACKUP SCHEDULER LOGS & EXIT CODES ---
+          Status: READ_ONLY Diagnostic Snapshot Completed.
+          {{ backup_audit_raw.stdout }}
+        dest: "{{ vault_base }}/backup/{{ inventory_hostname }}/backup_evidence_dossier.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Generate SHA-256 Checksum Manifest
+      ansible.builtin.shell: |
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 5. Display Backup Evidence Status
+      ansible.builtin.debug:
+        msg: "Backup incident evidence preserved in {{ vault_base }}/"

@@ -1,0 +1,94 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM HUGEPAGES & GUEST MEMORY BACKING AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / HYPERVISOR_TUNING
+# Scope: Hugetlbfs pools (2M / 1G), VM memoryBacking, hugepages allocation
+# ==============================================================================
+
+- name: Enterprise KVM HugePages & Guest Memory Backing Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Inspect Hypervisor HugePages Memory Pools (2MB & 1GB)"
+      ansible.builtin.shell: |
+        echo "=== /proc/meminfo HUGEPAGES ==="
+        grep -i huge /proc/meminfo
+        echo -e "\n=== KERNEL HUGEPAGE POOLS ==="
+        for pool in /sys/kernel/mm/hugepages/*; do
+          if [ -d "$pool" ]; then
+            echo "$(basename "$pool"): $(cat "$pool/nr_hugepages") total, $(cat "$pool/free_hugepages") free"
+          fi
+        done
+      register: hypervisor_hugepages
+      changed_when: false
+
+    - name: "3. Verify Hugetlbfs Mounts and File Permissions"
+      ansible.builtin.shell: |
+        mount -t hugetlbfs 2>/dev/null || echo "No hugetlbfs mounts discovered"
+      register: hugetlbfs_mounts
+      changed_when: false
+
+    - name: "4. Audit Virtual Machine memoryBacking Configurations (virsh dumpxml)"
+      ansible.builtin.shell: |
+        vms=$(virsh list --all --name)
+        if [ -z "$vms" ]; then
+          echo "No virtual machines present."
+        else
+          for vm in $vms; do
+            echo "=================================================="
+            echo "VM: $vm MEMORY BACKING CONFIGURATION"
+            echo "=================================================="
+            virsh dumpxml "$vm" 2>/dev/null | grep -A 4 -E "<memoryBacking>" || echo "Standard 4KB page backing"
+          done
+        fi
+      register: vm_memory_backing
+      changed_when: false
+
+    - name: "5. Save HugePages Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM HUGEPAGES & GUEST MEMORY BACKING AUDIT REPORT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. HYPERVISOR HUGEPAGE MEMORY POOLS ---
+          {{ hypervisor_hugepages.stdout }}
+
+          --- 2. HUGETLBFS ACTIVE MOUNTS ---
+          {{ hugetlbfs_mounts.stdout }}
+
+          --- 3. PER-VM GUEST MEMORY BACKING DIRECTIVES ---
+          {{ vm_memory_backing.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/hugepages_memory_backing_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display HugePages Summary"
+      ansible.builtin.debug:
+        msg: "HugePages memory backing audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/hugepages_memory_backing_audit.txt"

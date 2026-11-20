@@ -1,0 +1,79 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_process_resource_analysis.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Process and Resource Consumption Analysis
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Capture Top 20 CPU Consuming Processes
+      ansible.builtin.command:
+        cmd: ps -eo pid,ppid,user,%cpu,%mem,time,comm --sort=-%cpu
+      register: top_cpu_processes
+      changed_when: false
+
+    - name: 2. Capture Top 20 Memory Consuming Processes
+      ansible.builtin.command:
+        cmd: ps -eo pid,ppid,user,%cpu,%mem,rss,comm --sort=-rss
+      register: top_mem_processes
+      changed_when: false
+
+    - name: 3. Audit High Thread Count Processes
+      ansible.builtin.command:
+        cmd: ps -eo nlwp,pid,user,comm --sort=-nlwp
+      register: top_thread_processes
+      changed_when: false
+
+    - name: 4. Check for Processes in Uninterruptible Sleep (D-State)
+      ansible.builtin.command:
+        cmd: ps -eo pid,user,wchan:20,comm --state D
+      register: d_state_detail
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Ensure Controller Performance Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 6. Save Process Consumption Artifact
+      ansible.builtin.copy:
+        content: |
+          === PROCESS & RESOURCE UTILIZATION AUDIT: {{ inventory_hostname }} ===
+          
+          --- TOP 20 CPU CONSUMERS ---
+          {{ top_cpu_processes.stdout_lines[:21] | join('\n') }}
+          
+          --- TOP 20 MEMORY CONSUMERS (RSS) ---
+          {{ top_mem_processes.stdout_lines[:21] | join('\n') }}
+          
+          --- TOP THREAD COUNT PROCESSES ---
+          {{ top_thread_processes.stdout_lines[:15] | join('\n') }}
+          
+          --- D-STATE (WAITING ON I/O / HARDWARE) PROCESSES ---
+          {{ d_state_detail.stdout | default('None detected - Process table healthy.') }}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/process_resource_analysis.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 7. Alert on Active D-State Processes
+      ansible.builtin.debug:
+        msg: "WARNING: Host {{ inventory_hostname }} has processes trapped in D-state (I/O wait): {{ d_state_detail.stdout_lines[1:] }}"
+      when: d_state_detail.stdout_lines | length > 1

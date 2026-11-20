@@ -1,0 +1,113 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_cpu_memory_performance.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux CPU and Memory Performance Analysis
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Minimal Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'loadavg'
+          - 'hardware'
+
+    - name: 2. Sample CPU Saturation via vmstat (5 samples, 1-sec interval)
+      ansible.builtin.command:
+        cmd: vmstat 1 5
+      register: vmstat_raw
+      changed_when: false
+
+    - name: 3. Capture Detailed Memory Telemetry via /proc/meminfo
+      ansible.builtin.command:
+        cmd: cat /proc/meminfo
+      register: meminfo_raw
+      changed_when: false
+
+    - name: 4. Capture Kernel Slab Allocator Usage
+      ansible.builtin.command:
+        cmd: slabtop -o
+      register: slabtop_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 5. Capture NUMA Node Balancing Statistics
+      ansible.builtin.command:
+        cmd: numastat
+      register: numastat_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Capture Virtual Memory Page Activity via /proc/vmstat
+      ansible.builtin.command:
+        cmd: cat /proc/vmstat
+      register: proc_vmstat_raw
+      changed_when: false
+
+    - name: 7. Extract Swap Thrashing Indicators (pswpin/pswpout)
+      ansible.builtin.set_fact:
+        swap_page_in: "{{ proc_vmstat_raw.stdout_lines | select('match', '^pswpin') | list | first | default('pswpin 0') }}"
+        swap_page_out: "{{ proc_vmstat_raw.stdout_lines | select('match', '^pswpout') | list | first | default('pswpout 0') }}"
+        oom_kill_count: "{{ proc_vmstat_raw.stdout_lines | select('match', '^oom_kill') | list | first | default('oom_kill 0') }}"
+
+    - name: 8. Construct Performance Telemetry Summary
+      ansible.builtin.set_fact:
+        perf_summary:
+          hostname: "{{ inventory_hostname }}"
+          load_average: "{{ ansible_loadavg }}"
+          total_memory_mb: "{{ ansible_memtotal_mb }}"
+          free_memory_mb: "{{ ansible_memfree_mb }}"
+          available_memory_mb: "{{ ansible_memavailable_mb | default('N/A') }}"
+          swap_total_mb: "{{ ansible_swaptotal_mb }}"
+          swap_free_mb: "{{ ansible_swapfree_mb }}"
+          swap_in_metric: "{{ swap_page_in }}"
+          swap_out_metric: "{{ swap_page_out }}"
+          oom_kills_detected: "{{ oom_kill_count }}"
+
+    - name: 9. Ensure Controller Performance Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 10. Persist Raw Performance Diagnostics on Controller
+      ansible.builtin.copy:
+        content: |
+          === CPU & MEMORY PERFORMANCE REPORT: {{ inventory_hostname }} ===
+          Timestamp: {{ ansible_date_time.iso8601 | default('N/A') }}
+          
+          --- VMSTAT SAMPLING ---
+          {{ vmstat_raw.stdout }}
+          
+          --- MEMINFO EXCERPT ---
+          {{ meminfo_raw.stdout_lines[:20] | join('\n') }}
+          
+          --- NUMA BALANCING ---
+          {{ numastat_raw.stdout | default('NUMA tools not installed') }}
+          
+          --- SLABTOP TOP ENTRIES ---
+          {{ slabtop_raw.stdout_lines[:25] | default(['slabtop unavailable']) | join('\n') }}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/cpu_memory_report.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 11. Display Performance Health Summary
+      ansible.builtin.debug:
+        var: perf_summary

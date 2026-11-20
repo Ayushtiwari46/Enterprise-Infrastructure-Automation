@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_sar_performance_collection.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.find
+#   - ansible.builtin.fetch
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Historical SAR Performance Telemetry Extraction
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    sar_collection_days: "{{ global_sar_days_default | default(7) }}"
+
+  tasks:
+    - name: 1. Verify sysstat / SAR Availability on Target
+      ansible.builtin.command:
+        cmd: which sar
+      register: sar_which
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Check SAR Data Directory (/var/log/sa)
+      ansible.builtin.find:
+        paths: "{{ linux_sar_dir }}"
+        patterns: "sa[0-9]*"
+        age: "-{{ sar_collection_days }}d"
+        recurse: false
+      register: sar_binary_files
+      when: sar_which.rc == 0
+
+    - name: 3. Ensure Local Controller Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/sar"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Extract Historical CPU Utilization via SAR
+      ansible.builtin.command:
+        cmd: sar -u -f /var/log/sa/sa{{ item }}
+      loop: "{{ range(1, 32) | list }}"
+      register: sar_cpu_history
+      changed_when: false
+      failed_when: false
+      when: sar_which.rc == 0
+
+    - name: 5. Extract Historical Disk I-O Saturation via SAR
+      ansible.builtin.command:
+        cmd: sar -d -p -f /var/log/sa/sa{{ item }}
+      loop: "{{ range(1, 32) | list }}"
+      register: sar_disk_history
+      changed_when: false
+      failed_when: false
+      when: sar_which.rc == 0
+
+    - name: 6. Extract Historical Network Throughput via SAR
+      ansible.builtin.command:
+        cmd: sar -n DEV -f /var/log/sa/sa{{ item }}
+      loop: "{{ range(1, 32) | list }}"
+      register: sar_net_history
+      changed_when: false
+      failed_when: false
+      when: sar_which.rc == 0
+
+    - name: 7. Convert Available SAR to Formatted Report
+      ansible.builtin.copy:
+        content: |
+          === SAR HISTORICAL TELEMETRY: {{ inventory_hostname }} ===
+          Discovered SAR Daily Files: {{ sar_binary_files.matched | default(0) }}
+          
+          --- TODAY CPU REPORT ---
+          {{ sar_cpu_history.results | selectattr('rc', 'equalto', 0) | map(attribute='stdout') | list | last | default('No daily SAR data') }}
+          
+          --- TODAY DISK I/O REPORT ---
+          {{ sar_disk_history.results | selectattr('rc', 'equalto', 0) | map(attribute='stdout') | list | last | default('No daily SAR data') }}
+          
+          --- TODAY NETWORK REPORT ---
+          {{ sar_net_history.results | selectattr('rc', 'equalto', 0) | map(attribute='stdout') | list | last | default('No daily SAR data') }}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/sar/sar_summary.txt"
+        mode: '0644'
+      delegate_to: localhost
+      when: sar_which.rc == 0
+
+    - name: 8. Report SAR Collection Status
+      ansible.builtin.debug:
+        msg: >-
+          {{ (sar_which.rc == 0)
+             | ternary('SAR telemetry extracted. Discovered ' ~ (sar_binary_files.matched | default(0)) ~ ' binary archives.',
+                       'WARNING: sysstat / sar binary not found on ' ~ inventory_hostname) }}

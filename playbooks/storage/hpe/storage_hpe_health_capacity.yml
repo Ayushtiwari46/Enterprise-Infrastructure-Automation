@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# PLAYBOOK: storage_hpe_health_capacity.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: HPE Primera, 3PAR, Alletra (WSAPI REST)
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: HPE Primera / 3PAR Health, Failover Readiness, and CPG Capacity Audit
+  hosts: hpe_storage:mock_storage
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/hpe.yml
+
+  vars:
+    hpe_host: "{{ ansible_host | default('10.100.80.21') }}"
+    hpe_user: "{{ storage_user | default('3paradm') }}"
+    hpe_password: "{{ storage_pass | default('3parpass') }}"
+
+  tasks:
+    - name: 1. Query System Nodes State and Failover Readiness
+      ansible.builtin.uri:
+        url: "https://{{ hpe_host }}:{{ hpe_storage_rest_port }}/api/v1/nodes"
+        method: GET
+        user: "{{ hpe_user }}"
+        password: "{{ hpe_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: hpe_nodes_raw
+      ignore_errors: true
+
+    - name: 2. Query System Alerts and Component Failures
+      ansible.builtin.uri:
+        url: "https://{{ hpe_host }}:{{ hpe_storage_rest_port }}/api/v1/alerts"
+        method: GET
+        user: "{{ hpe_user }}"
+        password: "{{ hpe_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: hpe_alerts_raw
+      ignore_errors: true
+
+    - name: 3. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save HPE Health and Capacity Artifact
+      ansible.builtin.copy:
+        content: |
+          === HPE STORAGE HEALTH & NODE READINESS AUDIT: {{ inventory_hostname }} ===
+          
+          --- CONTROLLER NODES STATUS ---
+          {{ hpe_nodes_raw.json | default(hpe_nodes_raw.content | default('Node telemetry unavailable')) }}
+          
+          --- SYSTEM ALERTS & FAULTS ---
+          {{ hpe_alerts_raw.json | default(hpe_alerts_raw.content | default('No active hardware alerts logged')) }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/hpe_health_capacity.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display HPE Health Audit Status
+      ansible.builtin.debug:
+        msg: "HPE Storage health and node readiness audit complete for {{ inventory_hostname }}."

@@ -1,0 +1,67 @@
+---
+# ==============================================================================
+# PLAYBOOK: terraform_plan_review.yml
+# ==============================================================================
+# Operational Category: Health Checks / Audit
+# Safety Classification: READ_ONLY
+# Safety Policy: MANDATORY: NEVER execute terraform apply or destroy.
+# Supported Platforms: Terraform CLI 1.x+
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Terraform Speculative Plan Review and Drift Quantification
+  hosts: control_nodes:localhost
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+
+  vars:
+    tf_workspace_dir: "{{ terraform_dir | default('/root/Infrastructure-Automation') }}"
+
+  tasks:
+    - name: 1. Verify Terraform Binary
+      ansible.builtin.command:
+        cmd: which terraform
+      register: tf_which
+      changed_when: false
+      failed_when: false
+
+    - name: "2. Execute Speculative Plan Review (Read-Only: -lock=false -refresh=true)"
+      ansible.builtin.command:
+        cmd: terraform plan -no-color -lock=false -detailed-exitcode
+        chdir: "{{ tf_workspace_dir }}"
+      register: tf_plan_raw
+      changed_when: false
+      failed_when: tf_plan_raw.rc not in [0, 2]
+      when: tf_which.rc == 0
+
+    - name: 3. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 4. Save Speculative Plan Artifact
+      ansible.builtin.copy:
+        content: |
+          === TERRAFORM SPECULATIVE PLAN REVIEW: {{ inventory_hostname }} ===
+          Safety Gate: READ_ONLY execution. Apply and Destroy are strictly disabled.
+          Exit Code: {{ tf_plan_raw.rc | default('N/A') }} (0 = No changes, 2 = Succeeded with changes)
+          
+          --- SPECULATIVE PLAN OUTPUT ---
+          {{ tf_plan_raw.stdout | default('Terraform binary not available or workspace uninitialized.') }}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/terraform_plan_review.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 5. Display Plan Review Outcome
+      ansible.builtin.debug:
+        msg: >-
+          {{ (tf_plan_raw.rc | default(0) == 0)
+             | ternary('Terraform Infrastructure Clean: No drift or pending changes detected.',
+                       'Terraform Drift / Changes Detected: Review generated report.') }}

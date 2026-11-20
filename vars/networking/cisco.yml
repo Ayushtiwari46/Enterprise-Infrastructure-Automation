@@ -1,0 +1,8 @@
+# ==============================================================================
+# CISCO MDS SAN SWITCH (NX-OS) VARIABLES
+# ==============================================================================
+cisco_mds_ssh_port: 22
+cisco_mds_nxapi_port: 8443
+cisco_mds_crc_threshold: 5
+cisco_mds_slow_drain_alert: true
+cisco_mds_default_vsan: 1

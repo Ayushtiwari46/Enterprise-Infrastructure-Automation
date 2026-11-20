@@ -1,0 +1,97 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM LINUX BRIDGES, TAP & SR-IOV NETWORKING AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / NETWORK_AUDIT
+# Scope: Linux bridges (brctl / bridge), tap devices, SR-IOV VFs, macvtap, drops
+# ==============================================================================
+
+- name: Enterprise KVM Virtual Network Bridges & TAP Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Audit Hypervisor Linux Bridges & Ports (bridge link show)"
+      ansible.builtin.shell: |
+        if command -v bridge >/dev/null 2>&1; then
+          echo "=== BRIDGE LINKS ==="
+          bridge link show
+          echo -e "\n=== BRIDGE FDB (FORWARDING DATABASE) ==="
+          bridge fdb show | head -n 50
+        elif command -v brctl >/dev/null 2>&1; then
+          brctl show
+        else
+          ip -d link show type bridge
+        fi
+      register: bridge_details
+      changed_when: false
+
+    - name: "3. Audit Virtual TAP Interfaces Connected to VMs"
+      ansible.builtin.shell: |
+        ip -s link show type veth 2>/dev/null || true
+        echo -e "\n=== TAP INTERFACES ==="
+        ip -s link show | grep -E "^[0-9]+: (vnet|tap)" || echo "No active tap/vnet interfaces"
+      register: tap_interfaces
+      changed_when: false
+
+    - name: "4. Scan for Network Packet Drops on Virtual Interfaces"
+      ansible.builtin.shell: |
+        ip -s link | awk '/^[0-9]+: (vnet|tap|br|bond)/ {iface=$2} /RX: bytes/ {getline; rx_drop=$3} /TX: bytes/ {getline; tx_drop=$3; if (rx_drop > 0 || tx_drop > 0) print iface " RX_DROP: " rx_drop " TX_DROP: " tx_drop}'
+      register: tap_packet_drops
+      changed_when: false
+
+    - name: "5. Audit SR-IOV Physical Functions & Virtual Functions"
+      ansible.builtin.shell: |
+        ip link | grep -i "vf [0-9]" || lspci -nn | grep -i -E "(ethernet|network)" || echo "No SR-IOV virtual functions detected"
+      register: sriov_audit
+      changed_when: false
+
+    - name: "6. Save KVM Virtual Networking Audit on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM LINUX BRIDGES, TAP DEVICES & SR-IOV AUDIT REPORT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. LINUX BRIDGES & PORT MEMBERSHIP ---
+          {{ bridge_details.stdout }}
+
+          --- 2. VIRTUAL TAP / VNET INTERFACES ---
+          {{ tap_interfaces.stdout }}
+
+          --- 3. PACKET DROPS ON VIRTUAL BRIDGES & TAPS ---
+          {{ tap_packet_drops.stdout if tap_packet_drops.stdout != "" else "Zero packet drops observed on virtual interfaces." }}
+
+          --- 4. SR-IOV & PHYSICAL NETWORK ADAPTERS ---
+          {{ sriov_audit.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/bridge_sriov_network_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Virtual Network Status Summary"
+      ansible.builtin.debug:
+        msg: "Virtual network bridge audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/bridge_sriov_network_audit.txt"

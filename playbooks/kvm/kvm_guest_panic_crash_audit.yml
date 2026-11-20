@@ -1,0 +1,99 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM GUEST PANIC & CRASH DUMP CONFIGURATION AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / HYPERVISOR_AUDIT
+# Scope: pvpanic devices, watchdog i6300esb, on_crash policies, dump storage
+# ==============================================================================
+
+- name: Enterprise KVM Guest Panic & Crash Dump Policy Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Audit Virtual Machine on_crash, on_reboot & on_poweroff Policies"
+      ansible.builtin.shell: |
+        vms=$(virsh list --all --name)
+        if [ -z "$vms" ]; then
+          echo "No virtual machines present."
+        else
+          for vm in $vms; do
+            echo "=================================================="
+            echo "VM: $vm LIFECYCLE EVENT POLICIES"
+            echo "=================================================="
+            virsh dumpxml "$vm" 2>/dev/null | grep -E "<on_(crash|reboot|poweroff)>" || echo "Default libvirt policies (destroy/restart)"
+          done
+        fi
+      register: vm_lifecycle_policies
+      changed_when: false
+
+    - name: "3. Audit Configured pvpanic & Watchdog Devices in VM Definitions"
+      ansible.builtin.shell: |
+        vms=$(virsh list --all --name)
+        if [ -n "$vms" ]; then
+          for vm in $vms; do
+            echo "=== VM: $vm PANIC & WATCHDOG DEVICES ==="
+            virsh dumpxml "$vm" 2>/dev/null | grep -A 2 -E "(<panic|<watchdog)" || echo "No panic or watchdog devices configured"
+          done
+        fi
+      register: vm_panic_devices
+      changed_when: false
+
+    - name: "4. Check Hypervisor QEMU Core Dump Directory Space (/var/lib/libvirt/qemu/dump)"
+      ansible.builtin.shell: |
+        if [ -d /var/lib/libvirt/qemu/dump ]; then
+          df -hP /var/lib/libvirt/qemu/dump
+          ls -lh /var/lib/libvirt/qemu/dump/
+        else
+          echo "/var/lib/libvirt/qemu/dump absent, using /var/crash"
+          df -hP /var/crash 2>/dev/null || true
+        fi
+      register: qemu_dump_space
+      changed_when: false
+
+    - name: "5. Save Guest Panic Policy Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM GUEST PANIC & CRASH DUMP CONFIGURATION AUDIT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. VM LIFECYCLE & ON_CRASH POLICIES ---
+          {{ vm_lifecycle_policies.stdout }}
+
+          --- 2. PVPANIC & WATCHDOG HARDWARE DEVICES ---
+          {{ vm_panic_devices.stdout }}
+
+          --- 3. HYPERVISOR CRASH DUMP DIRECTORY CAPACITY ---
+          {{ qemu_dump_space.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/guest_panic_crash_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Panic Audit Summary"
+      ansible.builtin.debug:
+        msg: "Guest panic policy audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/guest_panic_crash_audit.txt"

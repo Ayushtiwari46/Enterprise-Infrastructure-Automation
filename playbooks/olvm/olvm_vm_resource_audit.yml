@@ -1,0 +1,64 @@
+---
+# ==============================================================================
+# PLAYBOOK: olvm_vm_resource_audit.yml
+# ==============================================================================
+# Operational Category: Performance Reports
+# Safety Classification: PERFORMANCE_COLLECTION
+# Supported Platforms: Oracle Linux Virtualization Manager (OLVM 4.4, 4.5) / oVirt 4.x
+# Verified Modules (FQCN):
+#   - ansible.builtin.uri
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: OLVM Compute Resource Allocation, vCPU, and Memory Quota Audit
+  hosts: virtualization_managers:olvm_infrastructure
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    engine_url: "{{ olvm_engine_url | default('https://192.168.242.133/ovirt-engine/api') }}"
+    engine_user: "{{ olvm_user | default('admin@internal') }}"
+    engine_password: "{{ olvm_pass | default('Unknown@56') }}"
+
+  tasks:
+    - name: 1. Query VM Profiles and Memory Allocation
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/vms"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: vm_profiles
+      ignore_errors: true
+
+    - name: 2. Ensure Controller Performance Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 3. Save OLVM Resource Allocation Artifact
+      ansible.builtin.copy:
+        content: |
+          === OLVM COMPUTE ALLOCATION & RESOURCE AUDIT: {{ inventory_hostname }} ===
+          Engine Endpoint: {{ engine_url }}
+          
+          --- VM PROFILES & MEMORY ALLOCATION ---
+          {{ vm_profiles.json | default(vm_profiles.content | default('Failed to query VMs endpoint')) }}
+        dest: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}/olvm_vm_resource_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 4. Display Resource Audit Summary
+      ansible.builtin.debug:
+        msg: "OLVM VM resource allocation audit complete for {{ inventory_hostname }}."

@@ -1,0 +1,89 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: ENTERPRISE KVM
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported Platforms: Enterprise KVM / QEMU / libvirt
+# ==============================================================================
+
+- name: Enterprise KVM Hypervisor Incident Evidence Acquisition Engine
+  hosts: kvm_hypervisors
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Local Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - kvm/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Create Target Host Staging Directory
+      ansible.builtin.file:
+        path: "/tmp/kvm_case_staging_{{ case_id }}"
+        state: directory
+        mode: '0700'
+
+    - name: 3. Capture Libvirt Daemon Log and QEMU Log Tails
+      ansible.builtin.shell: |
+        journalctl -u libvirtd -n 2000 --no-pager > /tmp/kvm_case_staging_{{ case_id }}/libvirtd.log 2>&1 || true
+        ls -la /var/log/libvirt/qemu/ > /tmp/kvm_case_staging_{{ case_id }}/qemu_vm_logs.txt 2>&1 || true
+        dmesg -T | grep -Ei '(kvm|qemu|segfault|oom)' > /tmp/kvm_case_staging_{{ case_id }}/kernel_kvm_alerts.txt 2>&1 || true
+      changed_when: false
+
+    - name: 4. Capture Hypervisor Bridge and Virtual Interface Topology
+      ansible.builtin.shell: |
+        ip -d link show type bridge > /tmp/kvm_case_staging_{{ case_id }}/bridges.txt 2>&1
+        virsh net-list --all > /tmp/kvm_case_staging_{{ case_id }}/virsh_networks.txt 2>&1 || true
+        virsh pool-list --all > /tmp/kvm_case_staging_{{ case_id }}/virsh_pools.txt 2>&1 || true
+      changed_when: false
+
+    - name: 5. Bundle and Fetch KVM Evidence Archive
+      ansible.builtin.shell: |
+        cd /tmp/kvm_case_staging_{{ case_id }} && tar -czf ../kvm_evidence_{{ inventory_hostname }}.tar.gz *
+      changed_when: false
+
+    - name: 6. Fetch Archive to Controller Vault
+      ansible.builtin.fetch:
+        src: "/tmp/kvm_evidence_{{ inventory_hostname }}.tar.gz"
+        dest: "{{ vault_base }}/kvm/{{ inventory_hostname }}/kvm_evidence_{{ inventory_hostname }}.tar.gz"
+        flat: true
+
+    - name: 7. Unpack Evidence and Generate SHA-256 Checksums
+      ansible.builtin.shell: |
+        cd {{ vault_base }}/kvm/{{ inventory_hostname }} && tar -xzf kvm_evidence_{{ inventory_hostname }}.tar.gz && rm -f kvm_evidence_{{ inventory_hostname }}.tar.gz
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 8. Clean Up Target Staging
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/kvm_case_staging_{{ case_id }}"
+        - "/tmp/kvm_evidence_{{ inventory_hostname }}.tar.gz"
+
+    - name: 9. Display KVM Evidence Status
+      ansible.builtin.debug:
+        msg: "KVM hypervisor incident evidence preserved in {{ vault_base }}/"

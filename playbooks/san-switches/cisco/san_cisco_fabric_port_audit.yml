@@ -1,0 +1,74 @@
+---
+# ==============================================================================
+# PLAYBOOK: san_cisco_fabric_port_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported Platforms: Cisco MDS 9000 Series (NX-OS)
+# Verified Modules (FQCN):
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Cisco MDS Fibre Channel Interface Errors, Port-Channels, and Slow Drain Audit
+  hosts: cisco_mds_san:mock_san
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/networking/cisco.yml
+
+  vars:
+    mds_ip: "{{ ansible_host | default('10.100.85.21') }}"
+    mds_user: "{{ san_user | default('admin') }}"
+
+  tasks:
+    - name: 1. Query FC Interface Brief Status (show interface brief)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ cisco_mds_ssh_port }} {{ mds_user }}@{{ mds_ip }} show interface brief"
+      register: mds_int_brief
+      changed_when: false
+      failed_when: false
+
+    - name: 2. Query Interface Counters and CRC Errors (show interface counters errors)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ cisco_mds_ssh_port }} {{ mds_user }}@{{ mds_ip }} show interface counters errors"
+      register: mds_int_errors
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Port-Channel Status and SAN Trunking (show port-channel summary)
+      ansible.builtin.command:
+        cmd: "ssh -o StrictHostKeyChecking=no -p {{ cisco_mds_ssh_port }} {{ mds_user }}@{{ mds_ip }} show port-channel summary"
+      register: mds_port_channel
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Ensure Controller Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Save Cisco MDS Fabric and Port Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === CISCO MDS 9000 FABRIC & PORT AUDIT: {{ inventory_hostname }} ===
+          
+          --- INTERFACE SUMMARY (show interface brief) ---
+          {{ mds_int_brief.stdout | default('CLI query unavailable or mock environment') }}
+          
+          --- PORT CRC ERRORS & PACKET DROPS ---
+          {{ mds_int_errors.stdout | default('Error counters unavailable') }}
+          
+          --- PORT-CHANNEL SUMMARY ---
+          {{ mds_port_channel.stdout | default('Port-channel query unavailable') }}
+        dest: "{{ playbook_dir }}/../../../reports/configuration-audits/{{ inventory_hostname }}/cisco_mds_port_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Display Cisco MDS Port Audit Status
+      ansible.builtin.debug:
+        msg: "Cisco MDS port error and fabric audit complete for {{ inventory_hostname }}."

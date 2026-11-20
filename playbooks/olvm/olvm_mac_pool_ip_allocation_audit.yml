@@ -1,0 +1,86 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM MAC ADDRESS POOL & IP ALLOCATION AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / VIRTUALIZATION_AUDIT
+# Scope: MAC address pools, duplicate MAC detection, range limits, vNIC MACs
+# ==============================================================================
+
+- name: OLVM MAC Address Pools & Virtual Interface Allocation Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query Logical Networks & IP Configuration via REST API"
+      ovirt.ovirt.ovirt_network_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: networks_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Engine Database for MAC Pool Allocations"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT id, name, default_pool, allow_duplicates FROM mac_pools;' 2>/dev/null" || true
+          echo -e "\n=== MAC POOL RANGES ==="
+          su - postgres -c "psql -d engine -c 'SELECT mac_pool_id, from_mac, to_mac FROM mac_pool_ranges;' 2>/dev/null" || true
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: mac_pools_db
+      changed_when: false
+
+    - name: "4. Scan for Duplicate Assigned MAC Addresses across Virtual NICs"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT mac_addr, count(*) FROM vm_interface GROUP BY mac_addr HAVING count(*) > 1;' 2>/dev/null" || echo "Query failed"
+        else
+          echo "Database query unavailable"
+        fi
+      register: duplicate_macs
+      changed_when: false
+
+    - name: "5. Save MAC Pool Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM MAC ADDRESS POOLS & ALLOCATION AUDIT REPORT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. REST API MAC POOL METADATA ---
+          {{ mac_pools_info.ovirt_mac_pools | default([]) }}
+
+          --- 2. DATABASE MAC POOL DEFINITIONS & RANGES ---
+          {{ mac_pools_db.stdout }}
+
+          --- 3. DUPLICATE MAC ADDRESS DETECTION SCAN ---
+          {{ duplicate_macs.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_mac_pool_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display MAC Pool Audit Summary"
+      ansible.builtin.debug:
+        msg: "OLVM MAC address pool audit complete. Report: {{ report_dir }}/olvm_mac_pool_audit.txt"

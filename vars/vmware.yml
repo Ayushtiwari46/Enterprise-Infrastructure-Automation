@@ -1,0 +1,16 @@
+# ==============================================================================
+# VMWARE VSPHERE OPERATIONAL & AUDIT VARIABLES
+# ==============================================================================
+
+# vCenter Connection Defaults (Passed securely or prompted interactively)
+vmware_vcenter_port: 443
+vmware_validate_certs: false
+
+# Thresholds & Audit Rules
+vmware_thresholds:
+  snapshot_age_warning_hours: 48
+  snapshot_age_critical_hours: 72
+  datastore_capacity_warning_percent: 80
+  datastore_capacity_critical_percent: 90
+  cpu_ready_warning_percent: 5.0
+  balloon_memory_alert_mb: 512

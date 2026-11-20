@@ -1,0 +1,94 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX CGROUPS & SYSTEMD RESOURCE QUOTA AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / PERFORMANCE_AUDIT
+# Scope: cgroups v1 vs v2, CPUQuota, MemoryMax, system.slice limits, task distribution
+# ==============================================================================
+
+- name: Enterprise Linux Cgroups & Resource Quota Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Performance Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Detect Cgroups Version (v1 vs v2 Unified Hierarchy)"
+      ansible.builtin.shell: |
+        if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
+          echo "Cgroups Version: V2 (Unified Hierarchy)"
+          echo "Active Controllers: $(cat /sys/fs/cgroup/cgroup.controllers)"
+        else
+          echo "Cgroups Version: V1 (Legacy Multi-Hierarchy)"
+        fi
+      register: cgroup_version
+      changed_when: false
+
+    - name: "3. Inspect Systemd Slices Resource Quotas (systemctl show)"
+      ansible.builtin.shell: |
+        echo "=== SYSTEM.SLICE LIMITS ==="
+        systemctl show system.slice --property=CPUQuotaPerSecUSec,CPUWeight,MemoryMax,MemoryHigh,TasksMax 2>/dev/null || true
+        echo -e "\n=== USER.SLICE LIMITS ==="
+        systemctl show user.slice --property=CPUQuotaPerSecUSec,CPUWeight,MemoryMax,MemoryHigh,TasksMax 2>/dev/null || true
+      register: slice_limits
+      changed_when: false
+
+    - name: "4. Audit Systemd Service Cgroup Allocations (systemd-cgls)"
+      ansible.builtin.shell: |
+        systemd-cgls --no-pager -k 2>/dev/null | head -n 60 || echo "systemd-cgls unavailable"
+      register: cgroup_tree
+      changed_when: false
+
+    - name: "5. Identify High Memory Consuming Cgroup Slices"
+      ansible.builtin.shell: |
+        systemd-cgtop -n 1 -b 2>/dev/null | head -n 25 || echo "systemd-cgtop unavailable"
+      register: cgtop_snapshot
+      changed_when: false
+
+    - name: "6. Save Cgroups Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX CGROUPS & RESOURCE CONTROLLER AUDIT REPORT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. CGROUP VERSION & CONTROLLERS ---
+          {{ cgroup_version.stdout }}
+
+          --- 2. SYSTEMD CORE SLICE RESOURCE LIMITS ---
+          {{ slice_limits.stdout }}
+
+          --- 3. TOP CGROUP RESOURCE CONSUMERS (systemd-cgtop) ---
+          {{ cgtop_snapshot.stdout }}
+
+          --- 4. CGROUP SERVICE ALLOCATION TREE (First 60 lines) ---
+          {{ cgroup_tree.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/cgroups_resource_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Cgroups Audit Summary"
+      ansible.builtin.debug:
+        msg: "Cgroups resource audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/cgroups_resource_audit.txt"

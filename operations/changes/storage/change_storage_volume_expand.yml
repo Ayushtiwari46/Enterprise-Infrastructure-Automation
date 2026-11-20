@@ -1,0 +1,79 @@
+---
+# ==============================================================================
+# CHANGE PLAYBOOK: ENTERPRISE STORAGE LUN EXPANSION
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: MUTATING_CHANGE (Requires explicit confirmation)
+# Guard: confirm_change == true
+# Check Mode Support: FULL (--check supported)
+# ==============================================================================
+
+- name: Enterprise Storage SAN LUN Capacity Expansion
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../../../vars/global.yml
+    - ../../../vars/storage/ibm.yml
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_SAN_LUN_001') }}"
+    confirm_change: false
+    storage_vendor: "{{ vendor | default('ibm') }}"
+    volume_name: "{{ vol_name | default('vol_app_data_01') }}"
+    new_capacity_gb: "{{ new_size_gb | default('500') }}"
+
+  pre_tasks:
+    - name: 1. Change Authorization & Safety Assertion
+      ansible.builtin.fail:
+        msg: >
+          CRITICAL ERROR: Change has NOT been confirmed!
+          This playbook modifies SAN storage volume capacities.
+          To execute this change, you must explicitly supply: -e "confirm_change=true"
+          Alternatively, test this change using --check mode.
+      when: not (confirm_change | bool) and not ansible_check_mode
+
+    - name: 2. Validate Storage Controller Connectivity
+      ansible.builtin.wait_for:
+        host: "{{ ibm_storage_hostname }}"
+        port: 22
+        timeout: 5
+      when: storage_vendor == 'ibm'
+
+    - name: 3. Query Target Volume Pre-Change Parameters
+      ansible.builtin.debug:
+        msg: "Querying volume {{ volume_name }} on {{ ibm_storage_hostname }}..."
+
+  tasks:
+    - name: 4. Execute Storage Volume Expansion Command
+      ansible.builtin.command: >
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no {{ ibm_storage_username }}@{{ ibm_storage_hostname }}
+        chvdisk -size {{ new_capacity_gb }} -unit gb {{ volume_name }}
+      register: storage_expand_result
+      changed_when: true
+      when: storage_vendor == 'ibm' and not ansible_check_mode
+
+  post_tasks:
+    - name: 5. Verify Post-Expansion Storage Capacity
+      ansible.builtin.command: >
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no {{ ibm_storage_username }}@{{ ibm_storage_hostname }}
+        lsvdisk -bytes {{ volume_name }}
+      register: post_storage_result
+      changed_when: false
+      when: storage_vendor == 'ibm' and not ansible_check_mode
+
+    - name: 6. Record Storage Change Evidence on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          STORAGE VOLUME EXPANSION RECORD: {{ change_id }}
+          ==============================================================================
+          Vendor Target        : {{ storage_vendor | upper }}
+          Storage Array        : {{ ibm_storage_hostname }}
+          Volume Name          : {{ volume_name }}
+          Requested Capacity   : {{ new_capacity_gb }} GB
+          Execution Mode       : {% if ansible_check_mode %}SIMULATED (CHECK_MODE){% else %}COMMITTED{% endif %}
+          Status               : SUCCESS
+          ==============================================================================
+        dest: "{{ playbook_dir }}/../../../reports/changes/change_storage_{{ change_id }}_{{ volume_name }}.txt"
+        mode: '0644'
+      delegate_to: localhost

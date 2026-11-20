@@ -1,0 +1,83 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_service_status_audit.yml
+# ==============================================================================
+# Operational Category: Health Checks
+# Safety Classification: READ_ONLY
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.service_facts
+#   - ansible.builtin.command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux System Services and Daemon Health Audit
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Service Facts
+      ansible.builtin.service_facts:
+
+    - name: 2. Query Systemd Failed Units
+      ansible.builtin.command:
+        cmd: systemctl --failed --no-legend --no-pager
+      register: systemd_failed
+      changed_when: false
+      failed_when: false
+
+    - name: 3. Query Active Listening Sockets (systemd)
+      ansible.builtin.command:
+        cmd: systemctl list-sockets --no-legend --no-pager
+      register: systemd_sockets
+      changed_when: false
+      failed_when: false
+
+    - name: 4. Extract Failed Services from Ansible Service Facts
+      ansible.builtin.set_fact:
+        failed_services_catalog: >-
+          {{ ansible_facts.services | default({}) | dict2items
+             | selectattr('value.state', 'defined')
+             | selectattr('value.state', 'equalto', 'failed')
+             | map(attribute='key')
+             | list }}
+
+    - name: 5. Construct Service Status Summary
+      ansible.builtin.set_fact:
+        service_audit_summary:
+          hostname: "{{ inventory_hostname }}"
+          total_cataloged_services: "{{ ansible_facts.services | default({}) | length }}"
+          failed_service_count: "{{ systemd_failed.stdout_lines | default([]) | length }}"
+          failed_units: "{{ systemd_failed.stdout_lines | default([]) }}"
+          listening_socket_count: "{{ systemd_sockets.stdout_lines | default([]) | length }}"
+
+    - name: 6. Ensure Controller Report Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 7. Save Service Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === SYSTEMD / INIT SERVICE AUDIT: {{ inventory_hostname }} ===
+          
+          --- FAILED SYSTEMD UNITS ---
+          {{ systemd_failed.stdout | default('None - All services healthy.') }}
+          
+          --- LISTENING SYSTEMD SOCKETS (TOP 20) ---
+          {{ systemd_sockets.stdout_lines[:20] | default(['No socket activation detected']) | join('\n') }}
+        dest: "{{ playbook_dir }}/../../reports/health-checks/{{ inventory_hostname }}/service_status_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 8. Display Service Audit Status
+      ansible.builtin.debug:
+        var: service_audit_summary

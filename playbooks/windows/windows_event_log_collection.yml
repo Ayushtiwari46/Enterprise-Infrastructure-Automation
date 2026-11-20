@@ -1,0 +1,75 @@
+---
+# ==============================================================================
+# PLAYBOOK: windows_event_log_collection.yml
+# ==============================================================================
+# Operational Category: Log Collection
+# Safety Classification: LOG_COLLECTION
+# Supported OS: Windows Server 2012 R2, 2016, 2019, 2022, 2025
+# Verified Modules (FQCN):
+#   - ansible.windows.win_shell
+#   - ansible.windows.win_command
+#   - ansible.builtin.file
+#   - ansible.builtin.copy
+#   - ansible.builtin.fetch
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Microsoft Windows Event Log Extraction and Diagnostic Export
+  hosts: windows_enterprise:mock_windows
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/windows.yml
+
+  vars:
+    win_event_hours: 24
+
+  tasks:
+    - name: 1. Ensure Target Temporary Staging Directory Exists
+      ansible.windows.win_shell: |
+        $path = 'C:\Temp\EvidenceCollection'
+        if (!(Test-Path $path)) { New-Item -ItemType Directory -Path $path -Force | Out-Null }
+        Write-Output "Directory verified"
+
+    - name: 2. Export Critical System and Error Events to CSV
+      ansible.windows.win_shell: |
+        $startTime = (Get-Date).AddHours(-{{ win_event_hours }})
+        $events = Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2,3; StartTime=$startTime} -MaxEvents 500 -ErrorAction SilentlyContinue |
+            Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message
+        $events | Export-Csv -Path 'C:\Temp\EvidenceCollection\System_Errors.csv' -NoTypeInformation -Encoding UTF8
+        Write-Output "Extracted $($events.Count) system events"
+      register: sys_event_export
+      changed_when: false
+
+    - name: 3. Export Critical Application Error Events to CSV
+      ansible.windows.win_shell: |
+        $startTime = (Get-Date).AddHours(-{{ win_event_hours }})
+        $events = Get-WinEvent -FilterHashtable @{LogName='Application'; Level=1,2; StartTime=$startTime} -MaxEvents 500 -ErrorAction SilentlyContinue |
+            Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message
+        $events | Export-Csv -Path 'C:\Temp\EvidenceCollection\Application_Errors.csv' -NoTypeInformation -Encoding UTF8
+        Write-Output "Extracted $($events.Count) application events"
+      register: app_event_export
+      changed_when: false
+
+    - name: 4. Ensure Controller Log Collection Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 5. Fetch Exported System Event Logs to Controller
+      ansible.builtin.fetch:
+        src: 'C:\Temp\EvidenceCollection\System_Errors.csv'
+        dest: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}/"
+        flat: true
+
+    - name: 6. Fetch Exported Application Event Logs to Controller
+      ansible.builtin.fetch:
+        src: 'C:\Temp\EvidenceCollection\Application_Errors.csv'
+        dest: "{{ playbook_dir }}/../../reports/log-collection/{{ inventory_hostname }}/"
+        flat: true
+
+    - name: 7. Display Windows Event Log Extraction Status
+      ansible.builtin.debug:
+        msg: "Completed Windows event log export for {{ inventory_hostname }}. Preserved in reports/log-collection/{{ inventory_hostname }}/"

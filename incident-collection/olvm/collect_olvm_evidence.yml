@@ -1,0 +1,115 @@
+---
+# ==============================================================================
+# INCIDENT EVIDENCE COLLECTION ENGINE: ORACLE LINUX VIRTUALIZATION MANAGER
+# ==============================================================================
+# Safety Classification: READ_ONLY / FORENSIC_ACQUISITION
+# Supported Platforms: OLVM 4.4, 4.5 / oVirt 4.x REST Engine
+# ==============================================================================
+
+- name: OLVM Manager Incident Evidence Acquisition Engine
+  hosts: virtualization_managers:olvm_infrastructure
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    case_id: "{{ case_number | default('INC0012345') }}"
+    customer_id: "{{ customer_name | default('INTERNAL-LAB') }}"
+    engine_url: "{{ olvm_engine_url | default('https://192.168.242.133/ovirt-engine/api') }}"
+    engine_user: "{{ olvm_user | default('admin@internal') }}"
+    engine_password: "{{ olvm_pass | default('Unknown@56') }}"
+
+  tasks:
+    - name: 0. Initialize Immutable Incident Evidence Session Context
+      ansible.builtin.set_fact:
+        session_ts: "{{ session_id | default(lookup('pipe', 'date +%Y%m%d_%H%M%S')) }}"
+
+    - name: 0b. Initialize Immutable Evidence Vault Path
+      ansible.builtin.set_fact:
+        vault_base: "{{ playbook_dir }}/../../case-output/{{ case_id }}/session_{{ session_ts }}"
+
+    - name: 1. Ensure Local Vault Directories Exist on Controller
+      ansible.builtin.file:
+        path: "{{ vault_base }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - case-details
+        - olvm/{{ inventory_hostname }}
+        - reports
+        - manifests
+      delegate_to: localhost
+
+    - name: 2. Query Recent System Events (olvm-engine events)
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/events"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_events_raw
+      ignore_errors: true
+
+    - name: 3. Query All VM Status and Crashes
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/vms"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_vms_raw
+      ignore_errors: true
+
+    - name: 4. Query Hypervisor Host Fencing and SPM States
+      ansible.builtin.uri:
+        url: "{{ engine_url }}/hosts"
+        method: GET
+        user: "{{ engine_user }}"
+        password: "{{ engine_password }}"
+        validate_certs: false
+        force_basic_auth: true
+        headers:
+          Accept: "application/json"
+        status_code: [200, 401, 403]
+        return_content: true
+      register: olvm_hosts_raw
+      ignore_errors: true
+
+    - name: 5. Persist OLVM Evidence Dossier on Controller
+      ansible.builtin.copy:
+        content: |
+          === OLVM ENGINE INCIDENT EVIDENCE: {{ inventory_hostname }} ===
+          Case: {{ case_id }} | Engine: {{ engine_url }} | Timestamp: {{ session_ts }}
+          
+          --- ENGINE AUDIT EVENTS ---
+          {{ olvm_events_raw.json | default(olvm_events_raw.content | default('Failed to query events endpoint')) }}
+          
+          --- VIRTUAL MACHINE STATES ---
+          {{ olvm_vms_raw.json | default(olvm_vms_raw.content | default('Failed to query VMs endpoint')) }}
+          
+          --- HYPERVISOR HOSTS & FENCING ---
+          {{ olvm_hosts_raw.json | default(olvm_hosts_raw.content | default('Failed to query hosts endpoint')) }}
+        dest: "{{ vault_base }}/olvm/{{ inventory_hostname }}/olvm_incident_dossier.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 6. Generate Cryptographic Manifest
+      ansible.builtin.shell: |
+        cd {{ vault_base }} && find . -type f ! -name "*.sha256" -exec sha256sum {} + > manifests/manifest_{{ inventory_hostname }}.sha256
+      delegate_to: localhost
+      changed_when: false
+
+    - name: 7. Display OLVM Evidence Status
+      ansible.builtin.debug:
+        msg: "OLVM incident evidence preserved in {{ vault_base }}/"

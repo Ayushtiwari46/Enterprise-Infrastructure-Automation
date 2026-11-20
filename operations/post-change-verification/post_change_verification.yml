@@ -1,0 +1,95 @@
+---
+# ==============================================================================
+# POST-CHANGE VERIFICATION & DRIFT DETECTION ENGINE
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / POST_CHANGE_VERIFICATION
+# Usage:
+#   ansible-playbook -i inventories/lab/hosts.yml operations/post-change-verification/post_change_verification.yml -e "change_id=CHG12345"
+# ==============================================================================
+
+- name: Multi-Platform Post-Change Infrastructure Verification
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+    - 'loadavg'
+    - 'hardware'
+
+  vars:
+    change_id: "{{ chg_id | default('CHG_BASELINE_001') }}"
+    baseline_dir: "{{ playbook_dir }}/../../reports/validation/pre-change-baselines/{{ change_id }}"
+    verification_dir: "{{ playbook_dir }}/../../reports/validation/post-change-verifications/{{ change_id }}"
+
+  tasks:
+    - name: 1. Ensure Post-Change Verification Directory Exists on Controller
+      ansible.builtin.file:
+        path: "{{ verification_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+    - name: 2. Capture Post-Change Filesystem Disk Usage
+      ansible.builtin.command: df -hP
+      register: post_df
+      changed_when: false
+
+    - name: 3. Verify No Critical Filesystem Above 95% Capacity
+      ansible.builtin.shell: |
+        df -hP | awk 'NR>1 {gsub("%","",$5); if ($5 > 95) print $6 " is critical: " $5 "%"}'
+      register: critical_fs
+      changed_when: false
+
+    - name: 4. Assert Filesystem Health
+      ansible.builtin.assert:
+        that:
+          - critical_fs.stdout == ""
+        fail_msg: "Post-change alert: Filesystem near full capacity: {{ critical_fs.stdout }}"
+        success_msg: "All filesystems within normal operational capacity thresholds."
+
+    - name: 5. Capture Running Services State
+      ansible.builtin.shell: |
+        systemctl list-units --type=service --state=running --no-pager 2>/dev/null || service --status-all 2>/dev/null
+      register: post_services
+      changed_when: false
+
+    - name: 6. Capture Active Network Listening Sockets
+      ansible.builtin.shell: |
+        ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null
+      register: post_sockets
+      changed_when: false
+
+    - name: 7. Compile Post-Change Verification & Drift Audit on Controller
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          POST-CHANGE INFRASTRUCTURE VERIFICATION & DRIFT AUDIT
+          ==============================================================================
+          Change Identifier    : {{ change_id }}
+          Target Node          : {{ inventory_hostname }}
+          Operating System     : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp            : {{ ansible_date_time.iso8601 }}
+          Post-Change Load     : {{ ansible_loadavg['1m'] }} (1m), {{ ansible_loadavg['5m'] }} (5m)
+          Filesystem Status    : HEALTHY (No volume > 95%)
+          Verification Status  : PASSED
+          ==============================================================================
+
+          --- 1. POST-CHANGE FILESYSTEM USAGE ---
+          {{ post_df.stdout }}
+
+          --- 2. POST-CHANGE ACTIVE SERVICES ---
+          {{ post_services.stdout }}
+
+          --- 3. POST-CHANGE LISTENING PORTS ---
+          {{ post_sockets.stdout }}
+          ==============================================================================
+        dest: "{{ verification_dir }}/post_change_verification_{{ inventory_hostname }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 8. Report Verification Status
+      ansible.builtin.debug:
+        msg: "Post-change verification for {{ inventory_hostname }} PASSED. Report: {{ verification_dir }}/post_change_verification_{{ inventory_hostname }}.txt"

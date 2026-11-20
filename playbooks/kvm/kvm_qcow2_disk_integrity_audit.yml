@@ -1,0 +1,87 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: KVM QCOW2 DISK CHAIN & CORRUPTION AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / STORAGE_AUDIT
+# Scope: qcow2 backing files, virtual allocation, qemu-img info, backing chain
+# ==============================================================================
+
+- name: Enterprise KVM QCOW2 Disk Chain & Virtual Storage Audit
+  hosts: kvm_hypervisors
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/kvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/virtualization/kvm/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure KVM Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Locate Virtual Machine Disk Images on Hypervisor Storage Pools"
+      ansible.builtin.shell: |
+        find /var/lib/libvirt/images /rhev/data-center -type f -name "*.*" 2>/dev/null | grep -E "(\.qcow2|\.raw|\.img)$" | head -n 30 || true
+      register: vm_image_files
+      changed_when: false
+
+    - name: "3. Run Safe Read-Only Inspection on Virtual Disk Headers (qemu-img info)"
+      ansible.builtin.shell: |
+        images=$(find /var/lib/libvirt/images /rhev/data-center -type f 2>/dev/null | grep -E "(\.qcow2|\.raw|\.img)$" | head -n 10)
+        if [ -z "$images" ]; then
+          echo "No local qcow2/raw images found in default directories."
+        else
+          for img in $images; do
+            echo "=================================================="
+            echo "IMAGE: $img"
+            echo "=================================================="
+            qemu-img info "$img" 2>&1 || true
+          done
+        fi
+      register: qemu_img_info_results
+      changed_when: false
+
+    - name: "4. Inspect Libvirt Storage Pools (virsh pool-list)"
+      ansible.builtin.shell: |
+        virsh pool-list --all --details 2>&1 || true
+      register: libvirt_pools
+      changed_when: false
+
+    - name: "5. Save Disk Integrity Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          KVM QCOW2 DISK CHAIN & STORAGE INTEGRITY AUDIT REPORT
+          ==============================================================================
+          Hypervisor Host   : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. ACTIVE LIBVIRT STORAGE POOLS ---
+          {{ libvirt_pools.stdout }}
+
+          --- 2. DISCOVERED VIRTUAL DISK FILES ---
+          {{ vm_image_files.stdout }}
+
+          --- 3. QEMU-IMG HEADER & BACKING FILE INSPECTION ---
+          {{ qemu_img_info_results.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/qcow2_disk_integrity_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Disk Audit Summary"
+      ansible.builtin.debug:
+        msg: "QCOW2 disk integrity audit complete on {{ inventory_hostname }}. Report: {{ report_dir }}/qcow2_disk_integrity_audit.txt"

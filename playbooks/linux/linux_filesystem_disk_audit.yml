@@ -1,0 +1,123 @@
+---
+# ==============================================================================
+# PLAYBOOK: linux_filesystem_disk_audit.yml
+# ==============================================================================
+# Operational Category: Configuration Audits
+# Safety Classification: CONFIGURATION_AUDIT
+# Supported OS: RHEL 6/7/8/9/10, Oracle Linux, SLES, Ubuntu
+# Verified Modules (FQCN):
+#   - ansible.builtin.setup
+#   - ansible.builtin.command
+#   - ansible.builtin.copy
+#   - ansible.builtin.file
+#   - ansible.builtin.debug
+# ==============================================================================
+
+- name: Linux Filesystem, Inode, and LVM Storage Audit
+  hosts: linux_all
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  tasks:
+    - name: 1. Gather Mounts and Hardware Facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - 'mounts'
+
+    - name: 2. Query Detailed Disk Utilization (df -hP)
+      ansible.builtin.command:
+        cmd: df -hP
+      register: df_disk_raw
+      changed_when: false
+
+    - name: 3. Query Inode Consumption (df -iP)
+      ansible.builtin.command:
+        cmd: df -iP
+      register: df_inode_raw
+      changed_when: false
+
+    - name: 4. Check for Read-Only Filesystems (/proc/mounts)
+      ansible.builtin.command:
+        cmd: awk '$4 ~ /(^|,)ro(,|$)/ {print $1, $2, $3, $4}' /proc/mounts
+      register: ro_mounts
+      changed_when: false
+
+    - name: 5. Query Logical Volume Manager (LVM) Volume Groups
+      ansible.builtin.command:
+        cmd: vgs -o vg_name,vg_size,vg_free,lv_count,pv_count --noheadings --units g
+      register: vgs_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 6. Query LVM Logical Volumes
+      ansible.builtin.command:
+        cmd: lvs -o lv_name,vg_name,lv_size,lv_attr --noheadings --units g
+      register: lvs_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 7. Query LVM Physical Volumes
+      ansible.builtin.command:
+        cmd: pvs -o pv_name,vg_name,pv_size,pv_free,pv_attr --noheadings --units g
+      register: pvs_raw
+      changed_when: false
+      failed_when: false
+
+    - name: 8. Scan for Filesystems Exceeding Warning Thresholds
+      ansible.builtin.set_fact:
+        high_usage_mounts: >-
+          {{ ansible_mounts | selectattr('size_total', 'defined')
+             | selectattr('size_total', 'gt', 0)
+             | map('json_query', '{mount: mount, device: device, used_pct: (size_total - size_available) * 100 / size_total}')
+             | selectattr('used_pct', 'ge', linux_thresholds.filesystem_warning_percent)
+             | list }}
+
+    - name: 9. Construct Filesystem Audit Record
+      ansible.builtin.set_fact:
+        fs_audit_record:
+          hostname: "{{ inventory_hostname }}"
+          total_monitored_mounts: "{{ ansible_mounts | length }}"
+          read_only_filesystems: "{{ ro_mounts.stdout_lines | default([]) }}"
+          threshold_exceeded_mounts: "{{ high_usage_mounts }}"
+          lvm_volume_groups: "{{ vgs_raw.stdout_lines | default(['LVM not active']) }}"
+
+    - name: 10. Ensure Controller Configuration Audit Directory Exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: 11. Save Filesystem Audit Artifact
+      ansible.builtin.copy:
+        content: |
+          === FILESYSTEM & LVM AUDIT: {{ inventory_hostname }} ===
+          
+          --- DISK CAPACITY (df -hP) ---
+          {{ df_disk_raw.stdout }}
+          
+          --- INODE SATURATION (df -iP) ---
+          {{ df_inode_raw.stdout }}
+          
+          --- READ-ONLY FILESYSTEM CHECK ---
+          {{ ro_mounts.stdout | default('None detected - All filesystems read-write.') }}
+          
+          --- LVM VOLUME GROUPS ---
+          {{ vgs_raw.stdout | default('N/A') }}
+          
+          --- LVM LOGICAL VOLUMES ---
+          {{ lvs_raw.stdout | default('N/A') }}
+          
+          --- LVM PHYSICAL VOLUMES ---
+          {{ pvs_raw.stdout | default('N/A') }}
+        dest: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}/filesystem_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: 12. Alert on Read-Only or Critical Capacity Mounts
+      ansible.builtin.debug:
+        msg: "CRITICAL ALERT on {{ inventory_hostname }}: Detected Read-Only Mounts: {{ ro_mounts.stdout_lines }}"
+      when: ro_mounts.stdout_lines | length > 0

@@ -1,0 +1,15 @@
+# ==============================================================================
+# ORACLE LINUX VIRTUALIZATION MANAGER (OLVM) / OVIRT VARIABLES
+# ==============================================================================
+
+# Engine Endpoint Configuration
+olvm_engine_url: "https://192.168.242.133/ovirt-engine/api"
+olvm_engine_port: 443
+olvm_insecure_tls: true
+
+# Audit & Operational Limits
+olvm_thresholds:
+  storage_domain_critical_percent: 85
+  host_memory_commit_max_percent: 150
+  snapshot_age_warning_hours: 48
+  unregistered_disk_alert: true

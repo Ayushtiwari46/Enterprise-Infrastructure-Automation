@@ -1,0 +1,102 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX SCHEDULED JOBS & SYSTEMD TIMERS AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / L3_DIAGNOSTICS
+# Scope: crontab, /etc/cron.*, systemd timers, failed timer units
+# ==============================================================================
+
+- name: Enterprise Linux Cron & Systemd Timers Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Discover System-wide Systemd Timers"
+      ansible.builtin.command: systemctl list-timers --all --no-pager
+      register: systemd_timers
+      changed_when: false
+
+    - name: "3. Identify Any Inactive or Failed Systemd Timers"
+      ansible.builtin.shell: |
+        systemctl list-units --type=timer --state=failed --no-pager
+      register: failed_timers
+      changed_when: false
+
+    - name: "4. Audit System-wide Cron Directories (/etc/cron.*)"
+      ansible.builtin.shell: |
+        echo "=== /etc/crontab ==="
+        cat /etc/crontab 2>/dev/null | grep -v -E "^(#|$)" || true
+        echo -e "\n=== /etc/cron.d ==="
+        ls -la /etc/cron.d/ 2>/dev/null || true
+        echo -e "\n=== /etc/cron.daily ==="
+        ls -la /etc/cron.daily/ 2>/dev/null || true
+        echo -e "\n=== /etc/cron.hourly ==="
+        ls -la /etc/cron.hourly/ 2>/dev/null || true
+      register: system_cron_dirs
+      changed_when: false
+
+    - name: "5. Discover User Crontabs in /var/spool/cron"
+      ansible.builtin.shell: |
+        if [ -d /var/spool/cron ]; then
+          ls -la /var/spool/cron/
+          for user_cron in /var/spool/cron/*; do
+            if [ -f "$user_cron" ]; then
+              echo "--- User: $(basename "$user_cron") ---"
+              cat "$user_cron" | grep -v -E "^(#|$)" || echo "empty_or_comments"
+            fi
+          done
+        else
+          echo "/var/spool/cron absent"
+        fi
+      register: user_crontabs
+      changed_when: false
+
+    - name: "6. Save Scheduled Tasks Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX SCHEDULED TASKS & SYSTEMD TIMERS AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. ACTIVE SYSTEMD TIMERS ---
+          {{ systemd_timers.stdout }}
+
+          --- 2. FAILED TIMERS ---
+          {{ failed_timers.stdout }}
+
+          --- 3. SYSTEM-WIDE CRON JOBS ---
+          {{ system_cron_dirs.stdout }}
+
+          --- 4. USER SPOOL CRONTABS ---
+          {{ user_crontabs.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/scheduled_jobs_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "7. Display Timers Summary"
+      ansible.builtin.debug:
+        msg: "Scheduled tasks and timers audited on {{ inventory_hostname }}. Report: {{ report_dir }}/scheduled_jobs_audit.txt"

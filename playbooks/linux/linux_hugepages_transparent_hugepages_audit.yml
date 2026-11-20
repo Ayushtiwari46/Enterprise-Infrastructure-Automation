@@ -1,0 +1,95 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: LINUX HUGEPAGES & TRANSPARENT HUGEPAGES (THP) AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / PERFORMANCE_TUNING
+# Scope: /proc/meminfo hugepages, transparent_hugepage enabled/defrag settings
+# ==============================================================================
+
+- name: Enterprise Linux HugePages & THP Memory Optimization Audit
+  hosts: linux_all
+  gather_facts: true
+  gather_subset:
+    - '!all'
+    - 'min'
+    - 'distribution'
+
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/linux.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/performance/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Performance Report Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Inspect Static HugePages Allocation (/proc/meminfo)"
+      ansible.builtin.shell: |
+        grep -i -E "(hugepage|hugepagesize)" /proc/meminfo
+      register: meminfo_hugepages
+      changed_when: false
+
+    - name: "3. Inspect Transparent HugePages (THP) Enabled Status"
+      ansible.builtin.shell: |
+        cat /sys/kernel/mm/transparent_hugepage/enabled 2>/dev/null || echo "THP enabled path unavailable"
+      register: thp_enabled
+      changed_when: false
+
+    - name: "4. Inspect Transparent HugePages (THP) Defrag Policy"
+      ansible.builtin.shell: |
+        cat /sys/kernel/mm/transparent_hugepage/defrag 2>/dev/null || echo "THP defrag path unavailable"
+      register: thp_defrag
+      changed_when: false
+
+    - name: "5. Audit Kernel Shared Memory Parameters (/etc/sysctl.conf)"
+      ansible.builtin.shell: |
+        sysctl -a 2>/dev/null | grep -E "(kernel.shm|kernel.sem|vm.nr_hugepages)" || true
+      register: shm_params
+      changed_when: false
+
+    - name: "6. Check Hugetlbfs Mount Points"
+      ansible.builtin.shell: |
+        grep hugetlbfs /proc/mounts 2>/dev/null || echo "No hugetlbfs mount points active."
+      register: hugetlbfs_mounts
+      changed_when: false
+
+    - name: "7. Save HugePages Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          LINUX HUGEPAGES & THP MEMORY OPTIMIZATION AUDIT
+          ==============================================================================
+          Target Host       : {{ inventory_hostname }}
+          Distribution      : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Timestamp         : {{ ansible_date_time.iso8601 }}
+          ==============================================================================
+
+          --- 1. STATIC HUGEPAGES METRICS (/proc/meminfo) ---
+          {{ meminfo_hugepages.stdout }}
+
+          --- 2. TRANSPARENT HUGEPAGES (THP) ENABLED STATE ---
+          {{ thp_enabled.stdout }}
+
+          --- 3. TRANSPARENT HUGEPAGES DEFRAG POLICY ---
+          {{ thp_defrag.stdout }}
+
+          --- 4. HUGETLBFS MOUNT POINTS ---
+          {{ hugetlbfs_mounts.stdout }}
+
+          --- 5. KERNEL IPC / SHM / HUGEPAGE TUNABLES ---
+          {{ shm_params.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/hugepages_thp_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "8. Display HugePages Summary"
+      ansible.builtin.debug:
+        msg: "HugePages audit complete for {{ inventory_hostname }}. Report: {{ report_dir }}/hugepages_thp_audit.txt"

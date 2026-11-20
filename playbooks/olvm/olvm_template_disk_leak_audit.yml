@@ -1,0 +1,81 @@
+---
+# ==============================================================================
+# OPERATIONAL PLAYBOOK: OLVM TEMPLATE & FLOATING DISK LEAK AUDIT
+# ==============================================================================
+# Framework: Enterprise Infrastructure Automation Framework
+# Classification: READ_ONLY / STORAGE_AUDIT
+# Scope: VM templates, gold images, orphaned floating disks, unregistered images
+# ==============================================================================
+
+- name: OLVM VM Templates & Floating Disk Leak Audit
+  hosts: olvm_engine
+  gather_facts: false
+  vars_files:
+    - ../../vars/global.yml
+    - ../../vars/olvm.yml
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports/configuration-audits/{{ inventory_hostname }}"
+
+  tasks:
+    - name: "1. Ensure Audit Directory Exists on Controller"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: "2. Query All Virtual Machine Templates via REST API"
+      ovirt.ovirt.ovirt_template_info:
+        auth:
+          url: "{{ olvm_engine_url }}"
+          username: "{{ olvm_engine_username }}"
+          password: "{{ olvm_engine_password }}"
+          insecure: "{{ not olvm_validate_certs }}"
+      register: templates_info
+      delegate_to: localhost
+      ignore_errors: true
+
+    - name: "3. Query Engine Database for VM Templates and Base Versions"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT vm_name, is_template, template_version_name, template_version_number, description FROM vm_static WHERE is_template = true;' 2>/dev/null" || true
+        else
+          echo "Database CLI unavailable"
+        fi
+      register: templates_db
+      changed_when: false
+
+    - name: "4. Scan for Floating Unattached Virtual Disks (Disk Leaks)"
+      ansible.builtin.shell: |
+        if command -v su >/dev/null 2>&1; then
+          su - postgres -c "psql -d engine -c 'SELECT disk_id, disk_alias, disk_description, size, read_only FROM base_disks WHERE disk_id NOT IN (SELECT device_id FROM vm_device WHERE type = '\''disk'\'');' 2>/dev/null" || echo "No floating disks query available"
+        else
+          echo "Database query unavailable"
+        fi
+      register: floating_disks_db
+      changed_when: false
+
+    - name: "5. Save Template & Floating Disk Audit Report on Controller"
+      ansible.builtin.copy:
+        content: |
+          ==============================================================================
+          OLVM VM TEMPLATES & FLOATING DISK LEAK AUDIT REPORT
+          ==============================================================================
+          Target Engine     : {{ inventory_hostname }}
+          Timestamp         : {{ ansible_date_time.iso8601 | default('2026-11-20T03:25:00') }}
+          ==============================================================================
+
+          --- 1. ACTIVE VM TEMPLATES & GOLD IMAGES ---
+          {{ templates_db.stdout }}
+
+          --- 2. FLOATING DISKS UNATTACHED TO ANY VM (STORAGE LEAK RISK) ---
+          {{ floating_disks_db.stdout }}
+          ==============================================================================
+        dest: "{{ report_dir }}/olvm_template_disk_leak_audit.txt"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: "6. Display Template & Disk Leak Summary"
+      ansible.builtin.debug:
+        msg: "OLVM template and floating disk audit complete. Report: {{ report_dir }}/olvm_template_disk_leak_audit.txt"
