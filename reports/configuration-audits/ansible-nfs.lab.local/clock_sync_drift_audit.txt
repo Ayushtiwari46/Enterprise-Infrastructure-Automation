@@ -1,0 +1,69 @@
+==============================================================================
+LINUX CLOCK SYNCHRONIZATION & DRIFT AUDIT REPORT
+==============================================================================
+Target Host       : ansible-nfs.lab.local
+Distribution      : OracleLinux 8.10
+Timestamp         : 2026-11-19T22:03:34Z
+==============================================================================
+
+--- 1. TIMEDATECTL CLOCK STATUS ---
+               Local time: Fri 2026-11-20 03:33:46 IST
+           Universal time: Thu 2026-11-19 22:03:46 UTC
+                 RTC time: Thu 2026-11-19 22:03:46
+                Time zone: Asia/Kolkata (IST, +0530)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+
+--- 2. CHRONYC TRACKING METRICS ---
+Reference ID    : 9471102C (ns5022859.ip-148-113-16.net)
+Stratum         : 3
+Ref time (UTC)  : Thu Nov 19 21:53:03 2026
+System time     : 0.001455972 seconds slow of NTP time
+Last offset     : -0.002018270 seconds
+RMS offset      : 0.011193106 seconds
+Frequency       : 2.316 ppm slow
+Residual freq   : -0.056 ppm
+Skew            : 1.697 ppm
+Root delay      : 0.051110543 seconds
+Root dispersion : 0.005195966 seconds
+Update interval : 1030.1 seconds
+Leap status     : Normal
+
+--- 3. CHRONYC UPSTREAM NTP SOURCES ---
+
+  .-- Source mode  '^' = server, '=' = peer, '#' = local clock.
+ / .- Source state '*' = current best, '+' = combined, '-' = not combined,
+| /             'x' = may be in error, '~' = too variable, '?' = unusable.
+||                                                 .- xxxx [ yyyy ] +/- zzzz
+||      Reachability register (octal) -.           |  xxxx = adjusted offset,
+||      Log2(Polling interval) --.      |          |  yyyy = measured offset,
+||                                \     |          |  zzzz = estimated error.
+||                                 |    |           \
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^- ntp2.ggsrv.de                 2  10   377   903   -389us[-2318us] +/-  104ms
+^- ntp1.ggsrv.de                 2   9   377   550   +956us[ +956us] +/-   96ms
+^* ns5022859.ip-148-113-16.>     2  10   377   642  -1621us[-3639us] +/-   27ms
+^- ntp7.mum-in.hosts.301-mo>     2  10   377   701   +551us[-1447us] +/-   83ms
+
+--- 4. CHRONYC SOURCESTATS (JITTER & FREQUENCY) ---
+                             .- Number of sample points in measurement set.
+                            /    .- Number of residual runs with same sign.
+                           |    /    .- Length of measurement set (time).
+                           |   |    /      .- Est. clock freq error (ppm).
+                           |   |   |      /           .- Est. error in freq.
+                           |   |   |     |           /         .- Est. offset.
+                           |   |   |     |          |          |   On the -.
+                           |   |   |     |          |          |   samples. \
+                           |   |   |     |          |          |             |
+Name/IP Address            NP  NR  Span  Frequency  Freq Skew  Offset  Std Dev
+==============================================================================
+ntp2.ggsrv.de              33  18  145m     +0.348      2.225  +1481us  7301us
+ntp1.ggsrv.de              18   7  107m     +0.291      2.017  +3495us  4512us
+ns5022859.ip-148-113-16.>  33  19  124m     -0.056      1.472    -36us  4243us
+ntp7.mum-in.hosts.301-mo>  36  23  147m     +0.985      2.192  -4078us  8627us
+
+--- 5. TRADITIONAL NTP PEERS ---
+ntpq not installed
+==============================================================================

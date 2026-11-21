@@ -1,0 +1,41 @@
+=== LOG ROTATION & FORENSIC RETENTION ANALYSIS ===
+--- /etc/logrotate.conf ---
+# see "man logrotate" for details
+# rotate log files weekly
+weekly
+
+# keep 4 weeks worth of backlogs
+rotate 4
+
+# create new (empty) log files after rotating old ones
+create
+
+# use date as a suffix of the rotated file
+dateext
+
+# uncomment this if you want your log files compressed
+#compress
+
+# RPM packages drop log rotation information into this directory
+include /etc/logrotate.d
+
+# system-specific logs may be also be configured here.
+
+--- DISCOVERED LOG ARCHIVES (/var/log) ---
+No compressed historical log archives discovered.
+
+--- JOURNAL STORAGE METRICS ---
+Archived and active journals take up 8.0M in the file system.
+
+--- OLDEST AND NEWEST JOURNAL ENTRIES ---
+-- Logs begin at Thu 2026-11-19 19:13:06 IST, end at Fri 2026-11-20 00:45:49 IST. --
+Nov 20 00:45:49 ansible-nfs.lab.local python3[64361]: ansible-ansible.legacy.command Invoked with _raw_params=echo "=== LOG ROTATION & FORENSIC RETENTION ANALYSIS ===" > /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      echo "--- /etc/logrotate.conf ---" >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      cat /etc/logrotate.conf >> /tmp/case_staging_INC0012345/retention_analysis.txt 2>&1 || echo "logrotate.conf absent" >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      echo -e "\n--- DISCOVERED LOG ARCHIVES (/var/log) ---" >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      ls -lh /var/log/*.gz /var/log/*.xz /var/log/*-[0-9]* 2>/dev/null >> /tmp/case_staging_INC0012345/retention_analysis.txt || echo "No compressed historical log archives discovered." >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      echo -e "\n--- JOURNAL STORAGE METRICS ---" >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      journalctl --disk-usage >> /tmp/case_staging_INC0012345/retention_analysis.txt 2>&1 || echo "journalctl unavailable" >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      echo -e "\n--- OLDEST AND NEWEST JOURNAL ENTRIES ---" >> /tmp/case_staging_INC0012345/retention_analysis.txt
+                                                      journalctl -n 1 --reverse --no-pager >> /tmp/case_staging_INC0012345/retention_analysis.txt 2>&1 || true
+                                                       _uses_shell=True expand_argument_vars=True stdin_add_newline=True strip_empty_ends=True argv=None chdir=None executable=None creates=None removes=None stdin=None

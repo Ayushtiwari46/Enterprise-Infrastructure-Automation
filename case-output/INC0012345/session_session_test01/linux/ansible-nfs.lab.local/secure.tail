@@ -1,0 +1,533 @@
+Nov 19 19:10:57 ol8-template sshd[934]: Server listening on 0.0.0.0 port 22.
+Nov 19 19:10:57 ol8-template sshd[934]: Server listening on :: port 22.
+Nov 19 19:10:58 ol8-template polkitd[1147]: Loading rules from directory /etc/polkit-1/rules.d
+Nov 19 19:10:58 ol8-template polkitd[1147]: Loading rules from directory /usr/share/polkit-1/rules.d
+Nov 19 19:10:58 ol8-template polkitd[1147]: Finished loading, compiling and executing 2 rules
+Nov 19 19:10:58 ol8-template polkitd[1147]: Acquired the name org.freedesktop.PolicyKit1 on the system bus
+Nov 19 19:11:15 ol8-template sshd[5291]: error: kex_exchange_identification: Connection closed by remote host
+Nov 19 19:11:26 ol8-template sshd[5292]: Accepted publickey for root from 192.168.242.1 port 59334 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 19:11:26 ol8-template systemd[5296]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 19:11:26 ol8-template sshd[5292]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 19:11:26 ol8-template sshd[5292]: pam_unix(sshd:session): session closed for user root
+Nov 19 19:11:26 ol8-template sshd[5326]: Accepted publickey for root from 192.168.242.1 port 59335 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 19:11:26 ol8-template sshd[5326]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 19:11:26 ol8-template sshd[5326]: pam_unix(sshd:session): session closed for user root
+Nov 19 19:11:36 ol8-template systemd[5300]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 19:13:10 ol8-template sshd[903]: Server listening on 0.0.0.0 port 22.
+Nov 19 19:13:10 ol8-template sshd[903]: Server listening on :: port 22.
+Nov 19 19:13:11 ol8-template polkitd[1112]: Loading rules from directory /etc/polkit-1/rules.d
+Nov 19 19:13:11 ol8-template polkitd[1112]: Loading rules from directory /usr/share/polkit-1/rules.d
+Nov 19 19:13:11 ol8-template polkitd[1112]: Finished loading, compiling and executing 2 rules
+Nov 19 19:13:11 ol8-template polkitd[1112]: Acquired the name org.freedesktop.PolicyKit1 on the system bus
+Nov 19 19:16:25 ol8-template sshd[1736]: error: kex_exchange_identification: Connection closed by remote host
+Nov 19 19:16:49 ol8-template sshd[1737]: Accepted publickey for root from 192.168.242.1 port 50300 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 19:16:49 ol8-template systemd[1741]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 19:16:49 ol8-template sshd[1737]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 19:16:49 ol8-template sshd[1737]: pam_unix(sshd:session): session closed for user root
+Nov 19 19:17:00 ol8-template systemd[1745]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 19:17:11 ol8-template sshd[1778]: Accepted publickey for root from 192.168.242.1 port 50305 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 19:17:11 ol8-template systemd[1782]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 19:17:11 ol8-template sshd[1778]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 19:17:12 ol8-template sshd[1778]: pam_unix(sshd:session): session closed for user root
+Nov 19 19:17:22 ol8-template systemd[1786]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 19:18:04 ol8-template sshd[1860]: Accepted publickey for root from 192.168.242.1 port 62940 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 19:18:04 ol8-template systemd[1864]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 19:18:04 ol8-template sshd[1860]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 19:18:04 ol8-template sshd[1874]: Received disconnect from 192.168.242.1 port 62940:11: disconnected by user
+Nov 19 19:18:04 ol8-template sshd[1874]: Disconnected from user root 192.168.242.1 port 62940
+Nov 19 19:18:04 ol8-template sshd[1860]: pam_unix(sshd:session): session closed for user root
+Nov 19 19:18:14 ol8-template systemd[1868]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 20:02:52 ol8-template sshd[1917]: Accepted publickey for root from 192.168.242.1 port 58239 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 20:02:52 ol8-template systemd[1921]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 20:02:53 ol8-template sshd[1917]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 20:02:53 ol8-template sshd[1917]: pam_unix(sshd:session): session closed for user root
+Nov 19 20:03:03 ol8-template systemd[1926]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 20:03:15 ol8-template sshd[1959]: Accepted publickey for root from 192.168.242.1 port 58245 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 20:03:15 ol8-template systemd[1963]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 20:03:15 ol8-template sshd[1959]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 20:04:18 ol8-template sshd[1999]: Accepted publickey for root from 192.168.242.1 port 60213 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 20:04:18 ol8-template sshd[1999]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 20:04:19 ol8-template sshd[1999]: pam_unix(sshd:session): session closed for user root
+Nov 19 20:04:43 ol8-template sshd[2026]: Accepted publickey for root from 192.168.242.1 port 60219 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 20:04:43 ol8-template sshd[2026]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 20:04:43 ol8-template sshd[2026]: pam_unix(sshd:session): session closed for user root
+Nov 19 20:04:57 ol8-template sshd[1959]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:03:06 ol8-template sshd[12309]: Accepted publickey for root from 192.168.242.1 port 62164 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:03:07 ol8-template systemd[12314]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:03:07 ol8-template sshd[12309]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:03:07 ol8-template sshd[12325]: Received disconnect from 192.168.242.1 port 62164:11: disconnected by user
+Nov 19 22:03:07 ol8-template sshd[12325]: Disconnected from user root 192.168.242.1 port 62164
+Nov 19 22:03:07 ol8-template sshd[12309]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:03:17 ol8-template systemd[12319]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:03:18 ol8-template sshd[12351]: Accepted publickey for root from 192.168.242.1 port 56031 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:03:18 ol8-template systemd[12355]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:03:18 ol8-template sshd[12351]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:03:18 ol8-template sshd[12365]: Received disconnect from 192.168.242.1 port 56031:11: disconnected by user
+Nov 19 22:03:18 ol8-template sshd[12365]: Disconnected from user root 192.168.242.1 port 56031
+Nov 19 22:03:18 ol8-template sshd[12351]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:03:28 ol8-template systemd[12359]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:03:31 ol8-template sshd[12390]: Accepted publickey for root from 192.168.242.1 port 59763 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:03:31 ol8-template systemd[12394]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:03:31 ol8-template sshd[12390]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:03:31 ol8-template sshd[12404]: Received disconnect from 192.168.242.1 port 59763:11: disconnected by user
+Nov 19 22:03:31 ol8-template sshd[12404]: Disconnected from user root 192.168.242.1 port 59763
+Nov 19 22:03:31 ol8-template sshd[12390]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:03:41 ol8-template systemd[12398]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:03:51 ol8-template sshd[12428]: Accepted publickey for root from 192.168.242.1 port 58583 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:03:51 ol8-template systemd[12432]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:03:51 ol8-template sshd[12428]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:03:51 ol8-template sshd[12442]: Received disconnect from 192.168.242.1 port 58583:11: disconnected by user
+Nov 19 22:03:51 ol8-template sshd[12442]: Disconnected from user root 192.168.242.1 port 58583
+Nov 19 22:03:51 ol8-template sshd[12428]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:04:01 ol8-template sshd[12464]: Accepted publickey for root from 192.168.242.1 port 58586 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:04:01 ol8-template sshd[12464]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:04:30 ol8-template sshd[12467]: Received disconnect from 192.168.242.1 port 58586:11: disconnected by user
+Nov 19 22:04:30 ol8-template sshd[12467]: Disconnected from user root 192.168.242.1 port 58586
+Nov 19 22:04:30 ol8-template sshd[12464]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:04:40 ol8-template systemd[12436]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:05:03 ol8-template sshd[12874]: Accepted publickey for root from 192.168.242.1 port 61881 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:03 ol8-template systemd[12878]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:05:03 ol8-template sshd[12874]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:04 ol8-template sshd[12919]: Accepted publickey for root from 192.168.242.1 port 61882 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:04 ol8-template sshd[12919]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:04 ol8-template sshd[12919]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:05 ol8-template sshd[12972]: Accepted publickey for root from 192.168.242.132 port 51736 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:05:05 ol8-template sshd[12972]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:05 ol8-template sshd[12978]: Received disconnect from 192.168.242.132 port 51736:11: disconnected by user
+Nov 19 22:05:05 ol8-template sshd[12978]: Disconnected from user root 192.168.242.132 port 51736
+Nov 19 22:05:05 ol8-template sshd[12972]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:06 ol8-template sshd[12874]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:13 ol8-template sshd[13041]: Accepted publickey for root from 192.168.242.1 port 54706 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:13 ol8-template sshd[13041]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:13 ol8-template sshd[13041]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:24 ol8-template systemd[12882]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:05:39 ol8-template sshd[13068]: Accepted publickey for root from 192.168.242.1 port 58779 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:39 ol8-template systemd[13073]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:05:39 ol8-template sshd[13068]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:39 ol8-template sshd[13068]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:39 ol8-template sshd[13099]: Accepted publickey for root from 192.168.242.1 port 58782 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:39 ol8-template sshd[13099]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:39 ol8-template sshd[13099]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:41 ol8-template sshd[13134]: Accepted publickey for root from 192.168.242.1 port 58786 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:41 ol8-template sshd[13134]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:41 ol8-template sshd[13153]: Accepted publickey for root from 192.168.242.132 port 42820 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:05:41 ol8-template sshd[13153]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:05:41 ol8-template sshd[13156]: Received disconnect from 192.168.242.132 port 42820:11: disconnected by user
+Nov 19 22:05:41 ol8-template sshd[13156]: Disconnected from user root 192.168.242.132 port 42820
+Nov 19 22:05:41 ol8-template sshd[13153]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:42 ol8-template sshd[13134]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:05:52 ol8-template systemd[13076]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:05:59 ol8-template sshd[13225]: Accepted publickey for root from 192.168.242.1 port 52615 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:05:59 ol8-template systemd[13229]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:05:59 ol8-template sshd[13225]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:06:00 ol8-template sshd[13295]: Accepted publickey for root from 192.168.242.132 port 34724 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:06:00 ol8-template sshd[13295]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:06:01 ol8-template sshd[13225]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:06:35 ol8-template sshd[13480]: Accepted publickey for root from 192.168.242.1 port 50474 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:06:36 ol8-template sshd[13480]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:06:36 ol8-template sshd[13480]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:06:41 ol8-template sshd[13500]: Accepted publickey for root from 192.168.242.1 port 50476 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:06:41 ol8-template sshd[13500]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:06:41 ol8-template sshd[13503]: Received disconnect from 192.168.242.1 port 50476:11: disconnected by user
+Nov 19 22:06:41 ol8-template sshd[13503]: Disconnected from user root 192.168.242.1 port 50476
+Nov 19 22:06:41 ol8-template sshd[13500]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:06:48 ol8-template sshd[13521]: Accepted publickey for root from 192.168.242.1 port 50480 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:06:48 ol8-template sshd[13521]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:07:01 ol8-template sshd[13308]: Received disconnect from 192.168.242.132 port 34724:11: disconnected by user
+Nov 19 22:07:01 ol8-template sshd[13308]: Disconnected from user root 192.168.242.132 port 34724
+Nov 19 22:07:01 ol8-template sshd[13295]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:07:11 ol8-template sshd[13524]: Received disconnect from 192.168.242.1 port 50480:11: disconnected by user
+Nov 19 22:07:11 ol8-template sshd[13524]: Disconnected from user root 192.168.242.1 port 50480
+Nov 19 22:07:11 ol8-template sshd[13521]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:07:21 ol8-template systemd[13233]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:07:23 ol8-template sshd[13550]: Accepted publickey for root from 192.168.242.1 port 50099 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:07:23 ol8-template systemd[13554]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:07:23 ol8-template sshd[13550]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:07:23 ol8-template sshd[13564]: Received disconnect from 192.168.242.1 port 50099:11: disconnected by user
+Nov 19 22:07:23 ol8-template sshd[13564]: Disconnected from user root 192.168.242.1 port 50099
+Nov 19 22:07:23 ol8-template sshd[13550]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:07:29 ol8-template sshd[13582]: Accepted publickey for root from 192.168.242.1 port 56380 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:07:29 ol8-template sshd[13582]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:07:29 ol8-template sshd[13585]: Received disconnect from 192.168.242.1 port 56380:11: disconnected by user
+Nov 19 22:07:29 ol8-template sshd[13585]: Disconnected from user root 192.168.242.1 port 56380
+Nov 19 22:07:29 ol8-template sshd[13582]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:07:35 ol8-template sshd[13602]: Accepted publickey for root from 192.168.242.1 port 56759 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:07:35 ol8-template sshd[13602]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:07:36 ol8-template sshd[13625]: Accepted publickey for root from 192.168.242.132 port 56044 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:07:36 ol8-template sshd[13625]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:08:09 ol8-template sshd[13605]: Received disconnect from 192.168.242.1 port 56759:11: disconnected by user
+Nov 19 22:08:09 ol8-template sshd[13605]: Disconnected from user root 192.168.242.1 port 56759
+Nov 19 22:08:09 ol8-template sshd[13602]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:08:40 ol8-template sshd[13629]: Received disconnect from 192.168.242.132 port 56044:11: disconnected by user
+Nov 19 22:08:40 ol8-template sshd[13629]: Disconnected from user root 192.168.242.132 port 56044
+Nov 19 22:08:40 ol8-template sshd[13625]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:08:49 ol8-template sshd[15008]: Accepted publickey for root from 192.168.242.1 port 59513 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:08:49 ol8-template sshd[15008]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:08:49 ol8-template sshd[15011]: Received disconnect from 192.168.242.1 port 59513:11: disconnected by user
+Nov 19 22:08:49 ol8-template sshd[15011]: Disconnected from user root 192.168.242.1 port 59513
+Nov 19 22:08:49 ol8-template sshd[15008]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:08:56 ol8-template sshd[15030]: Accepted publickey for root from 192.168.242.1 port 59514 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:08:56 ol8-template sshd[15030]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:08:56 ol8-template sshd[15033]: Received disconnect from 192.168.242.1 port 59514:11: disconnected by user
+Nov 19 22:08:56 ol8-template sshd[15033]: Disconnected from user root 192.168.242.1 port 59514
+Nov 19 22:08:56 ol8-template sshd[15030]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:09:19 ol8-template systemd[13558]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:10:08 ol8-template sshd[15059]: Accepted publickey for root from 192.168.242.1 port 59842 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:10:08 ol8-template systemd[15063]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:10:08 ol8-template sshd[15059]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:10:08 ol8-template sshd[15073]: Received disconnect from 192.168.242.1 port 59842:11: disconnected by user
+Nov 19 22:10:08 ol8-template sshd[15073]: Disconnected from user root 192.168.242.1 port 59842
+Nov 19 22:10:08 ol8-template sshd[15059]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:10:18 ol8-template systemd[15067]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:10:22 ol8-template sshd[15096]: Accepted publickey for root from 192.168.242.1 port 59843 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:10:22 ol8-template systemd[15100]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:10:22 ol8-template sshd[15096]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:10:22 ol8-template sshd[15110]: Received disconnect from 192.168.242.1 port 59843:11: disconnected by user
+Nov 19 22:10:22 ol8-template sshd[15110]: Disconnected from user root 192.168.242.1 port 59843
+Nov 19 22:10:22 ol8-template sshd[15096]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:10:27 ol8-template sshd[15127]: Accepted publickey for root from 192.168.242.1 port 59844 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:10:27 ol8-template sshd[15127]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:10:27 ol8-template sshd[15156]: Accepted publickey for root from 192.168.242.132 port 45102 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:10:27 ol8-template sshd[15156]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:10:28 ol8-template sshd[15130]: Received disconnect from 192.168.242.1 port 59844:11: disconnected by user
+Nov 19 22:10:28 ol8-template sshd[15130]: Disconnected from user root 192.168.242.1 port 59844
+Nov 19 22:10:28 ol8-template sshd[15127]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:10:36 ol8-template sshd[15341]: Accepted publickey for root from 192.168.242.1 port 55446 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:10:36 ol8-template sshd[15341]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:10:36 ol8-template sshd[15344]: Received disconnect from 192.168.242.1 port 55446:11: disconnected by user
+Nov 19 22:10:36 ol8-template sshd[15344]: Disconnected from user root 192.168.242.1 port 55446
+Nov 19 22:10:36 ol8-template sshd[15341]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:11:28 ol8-template sshd[15169]: Received disconnect from 192.168.242.132 port 45102:11: disconnected by user
+Nov 19 22:11:28 ol8-template sshd[15169]: Disconnected from user root 192.168.242.132 port 45102
+Nov 19 22:11:28 ol8-template sshd[15156]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:11:38 ol8-template systemd[15104]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:11:45 ol8-template sshd[15370]: Accepted publickey for root from 192.168.242.1 port 55289 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:11:45 ol8-template systemd[15374]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:11:45 ol8-template sshd[15370]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:11:46 ol8-template sshd[15370]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:11:52 ol8-template sshd[15531]: Accepted publickey for root from 192.168.242.1 port 55290 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:11:52 ol8-template sshd[15531]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:11:53 ol8-template sshd[15558]: Accepted publickey for root from 192.168.242.132 port 58672 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:11:53 ol8-template sshd[15558]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:12:03 ol8-template sshd[15534]: Received disconnect from 192.168.242.1 port 55290:11: disconnected by user
+Nov 19 22:12:03 ol8-template sshd[15534]: Disconnected from user root 192.168.242.1 port 55290
+Nov 19 22:12:03 ol8-template sshd[15531]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:12:36 ol8-template sshd[16788]: Accepted publickey for root from 192.168.242.1 port 55294 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:12:36 ol8-template sshd[16788]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:12:37 ol8-template sshd[16791]: Received disconnect from 192.168.242.1 port 55294:11: disconnected by user
+Nov 19 22:12:37 ol8-template sshd[16791]: Disconnected from user root 192.168.242.1 port 55294
+Nov 19 22:12:37 ol8-template sshd[16788]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:12:59 ol8-template sshd[15568]: Received disconnect from 192.168.242.132 port 58672:11: disconnected by user
+Nov 19 22:12:59 ol8-template sshd[15568]: Disconnected from user root 192.168.242.132 port 58672
+Nov 19 22:12:59 ol8-template sshd[15558]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:13:09 ol8-template sshd[16823]: Accepted publickey for root from 192.168.242.1 port 56565 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:13:09 ol8-template sshd[16823]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:09 ol8-template sshd[16823]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:13:15 ol8-template sshd[16859]: Accepted publickey for root from 192.168.242.1 port 56566 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:13:15 ol8-template sshd[16859]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:16 ol8-template sshd[16886]: Accepted publickey for root from 192.168.242.132 port 44182 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 22:13:16 ol8-template sshd[16886]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:23 ol8-template sshd[16862]: Received disconnect from 192.168.242.1 port 56566:11: disconnected by user
+Nov 19 22:13:23 ol8-template sshd[16862]: Disconnected from user root 192.168.242.1 port 56566
+Nov 19 22:13:23 ol8-template sshd[16859]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:13:27 ol8-template sshd[17793]: Accepted publickey for root from 192.168.242.1 port 59245 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:13:27 ol8-template sshd[17793]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:27 ol8-template sshd[17796]: Received disconnect from 192.168.242.1 port 59245:11: disconnected by user
+Nov 19 22:13:27 ol8-template sshd[17796]: Disconnected from user root 192.168.242.1 port 59245
+Nov 19 22:13:27 ol8-template sshd[17793]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:13:31 ol8-template sshd[17813]: Accepted publickey for root from 192.168.242.1 port 59248 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:13:31 ol8-template sshd[17813]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:32 ol8-template sshd[17816]: Received disconnect from 192.168.242.1 port 59248:11: disconnected by user
+Nov 19 22:13:32 ol8-template sshd[17816]: Disconnected from user root 192.168.242.1 port 59248
+Nov 19 22:13:32 ol8-template sshd[17813]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:13:35 ol8-template sshd[17833]: Accepted publickey for root from 192.168.242.1 port 59263 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:13:35 ol8-template sshd[17833]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:35 ol8-template sshd[17836]: Received disconnect from 192.168.242.1 port 59263:11: disconnected by user
+Nov 19 22:13:35 ol8-template sshd[17836]: Disconnected from user root 192.168.242.1 port 59263
+Nov 19 22:13:35 ol8-template sshd[17833]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:13:39 ol8-template sshd[17853]: Accepted publickey for root from 192.168.242.1 port 59266 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:13:39 ol8-template sshd[17853]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:13:39 ol8-template sshd[17856]: Received disconnect from 192.168.242.1 port 59266:11: disconnected by user
+Nov 19 22:13:39 ol8-template sshd[17856]: Disconnected from user root 192.168.242.1 port 59266
+Nov 19 22:13:39 ol8-template sshd[17853]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:14:23 ol8-template sshd[16899]: Received disconnect from 192.168.242.132 port 44182:11: disconnected by user
+Nov 19 22:14:23 ol8-template sshd[16899]: Disconnected from user root 192.168.242.132 port 44182
+Nov 19 22:14:23 ol8-template sshd[16886]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:14:33 ol8-template systemd[15378]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:15:08 ol8-template sshd[17895]: Accepted publickey for root from 192.168.242.1 port 56516 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:15:08 ol8-template systemd[17899]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:15:08 ol8-template sshd[17895]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:15:08 ol8-template sshd[17909]: Received disconnect from 192.168.242.1 port 56516:11: disconnected by user
+Nov 19 22:15:08 ol8-template sshd[17909]: Disconnected from user root 192.168.242.1 port 56516
+Nov 19 22:15:08 ol8-template sshd[17895]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:15:18 ol8-template systemd[17903]: pam_unix(systemd-user:session): session closed for user root
+Nov 19 22:28:20 ol8-template sshd[18044]: Accepted password for root from 192.168.242.1 port 58463 ssh2
+Nov 19 22:28:20 ol8-template systemd[18050]: pam_unix(systemd-user:session): session opened for user root by (uid=0)
+Nov 19 22:28:20 ol8-template sshd[18044]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:28:20 ol8-template sshd[18048]: Accepted password for root from 192.168.242.1 port 58464 ssh2
+Nov 19 22:28:20 ol8-template sshd[18048]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:29:59 ol8-template sshd[18740]: Accepted publickey for root from 192.168.242.1 port 64269 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:29:59 ol8-template sshd[18740]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:29:59 ol8-template sshd[18743]: Received disconnect from 192.168.242.1 port 64269:11: disconnected by user
+Nov 19 22:29:59 ol8-template sshd[18743]: Disconnected from user root 192.168.242.1 port 64269
+Nov 19 22:29:59 ol8-template sshd[18740]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:30:08 ol8-template sshd[18846]: Accepted publickey for root from 192.168.242.1 port 64159 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:30:08 ol8-template sshd[18846]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:30:08 ol8-template sshd[18849]: Received disconnect from 192.168.242.1 port 64159:11: disconnected by user
+Nov 19 22:30:08 ol8-template sshd[18849]: Disconnected from user root 192.168.242.1 port 64159
+Nov 19 22:30:08 ol8-template sshd[18846]: pam_unix(sshd:session): session closed for user root
+Nov 19 22:31:08 ol8-template sshd[19287]: Accepted publickey for root from 192.168.242.1 port 62031 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 22:31:08 ol8-template sshd[19287]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 22:31:09 ol8-template sshd[19290]: Received disconnect from 192.168.242.1 port 62031:11: disconnected by user
+Nov 19 22:31:09 ol8-template sshd[19290]: Disconnected from user root 192.168.242.1 port 62031
+Nov 19 22:31:09 ol8-template sshd[19287]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:48:14 ol8-template sshd[45037]: error: kex_exchange_identification: Connection closed by remote host
+Nov 19 23:50:06 ol8-template sshd[45718]: Accepted publickey for root from 192.168.242.1 port 64918 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:50:06 ol8-template sshd[45718]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:50:06 ol8-template sshd[45718]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:50:32 ol8-template sshd[45908]: Accepted publickey for root from 192.168.242.1 port 56184 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:50:32 ol8-template sshd[45908]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:50:43 ol8-template sshd[45908]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:50:57 ol8-template sshd[46286]: Accepted publickey for root from 192.168.242.1 port 56198 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:50:57 ol8-template sshd[46286]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:50:58 ol8-template sshd[46286]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:51:10 ol8-template sshd[46477]: Accepted publickey for root from 192.168.242.1 port 56204 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:51:10 ol8-template sshd[46477]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:51:10 ol8-template sshd[46477]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:51:17 ol8-template sshd[46584]: Accepted publickey for root from 192.168.242.1 port 56206 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:51:17 ol8-template sshd[46584]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:51:17 ol8-template sshd[46584]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:51:26 ol8-template sshd[46658]: Accepted publickey for root from 192.168.242.1 port 56210 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:51:26 ol8-template sshd[46658]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:51:34 ol8-template sshd[46658]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:52:10 ol8-template sshd[46969]: Accepted publickey for root from 192.168.242.1 port 49670 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:52:10 ol8-template sshd[46969]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:52:10 ol8-template sshd[46969]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:52:27 ol8-template sshd[47098]: Accepted publickey for root from 192.168.242.1 port 49672 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:52:27 ol8-template sshd[47098]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:52:27 ol8-template sshd[47098]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:52:48 ol8-template sshd[47237]: Accepted publickey for root from 192.168.242.1 port 49683 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:52:48 ol8-template sshd[47237]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:52:48 ol8-template sshd[47237]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:55:53 ol8-template sshd[48391]: Accepted publickey for root from 192.168.242.1 port 49709 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:55:53 ol8-template sshd[48391]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:55:53 ol8-template sshd[48391]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:55:59 ol8-template sshd[48447]: Accepted publickey for root from 192.168.242.1 port 49710 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:55:59 ol8-template sshd[48447]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:55:59 ol8-template sshd[48447]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:59:34 ol8-template sshd[49764]: Accepted publickey for root from 192.168.242.1 port 49752 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:59:34 ol8-template sshd[49764]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:59:34 ol8-template sshd[49764]: pam_unix(sshd:session): session closed for user root
+Nov 19 23:59:40 ol8-template sshd[49833]: Accepted publickey for root from 192.168.242.1 port 49753 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 19 23:59:40 ol8-template sshd[49833]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:59:41 ol8-template sshd[49870]: Accepted publickey for root from 192.168.242.132 port 39536 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 19 23:59:41 ol8-template sshd[49870]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 19 23:59:42 ol8-template sshd[49833]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:00:36 ol8-template sshd[50228]: Accepted publickey for root from 192.168.242.1 port 51262 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:00:36 ol8-template sshd[50228]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:00:42 ol8-template sshd[49883]: Received disconnect from 192.168.242.132 port 39536:11: disconnected by user
+Nov 20 00:00:42 ol8-template sshd[49883]: Disconnected from user root 192.168.242.132 port 39536
+Nov 20 00:00:42 ol8-template sshd[49870]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:01:43 ol8-template sshd[50676]: Accepted publickey for root from 192.168.242.1 port 62533 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:01:43 ol8-template sshd[50676]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:01:43 ol8-template sshd[50676]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:02:02 ol8-template sshd[50228]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:02:15 ol8-template sshd[50906]: Accepted publickey for root from 192.168.242.1 port 62545 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:02:15 ol8-template sshd[50906]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:02:15 ol8-template sshd[50906]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:02:21 ol8-template sshd[50963]: Accepted publickey for root from 192.168.242.1 port 62546 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:02:21 ol8-template sshd[50963]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:03:10 ol8-template sshd[51285]: Accepted publickey for root from 192.168.242.1 port 51760 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:03:10 ol8-template sshd[51285]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:03:10 ol8-template sshd[51285]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:03:27 ol8-template sshd[51409]: Accepted publickey for root from 192.168.242.1 port 51772 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:03:27 ol8-template sshd[51409]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:03:27 ol8-template sshd[51409]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:03:43 ol8-template sshd[51525]: Accepted publickey for root from 192.168.242.1 port 51782 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:03:43 ol8-template sshd[51525]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:03:43 ol8-template sshd[51525]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:03:49 ol8-template sshd[51596]: Accepted publickey for root from 192.168.242.1 port 51792 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:03:49 ol8-template sshd[51596]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:03:49 ol8-template sshd[51596]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:04:00 ol8-template sshd[51682]: Accepted publickey for root from 192.168.242.1 port 52468 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:04:00 ol8-template sshd[51682]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:04:00 ol8-template sshd[51682]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:04:08 ol8-template sshd[51751]: Accepted publickey for root from 192.168.242.1 port 52471 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:04:08 ol8-template sshd[51751]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:04:08 ol8-template sshd[51751]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:04:14 ol8-template sshd[51807]: Accepted publickey for root from 192.168.242.1 port 52473 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:04:14 ol8-template sshd[51807]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:04:14 ol8-template sshd[51807]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:08:52 ol8-template sshd[53011]: Failed password for root from 192.168.242.133 port 49142 ssh2
+Nov 20 00:08:52 ol8-template sshd[53011]: Failed password for root from 192.168.242.133 port 49142 ssh2
+Nov 20 00:08:52 ol8-template sshd[53011]: Connection closed by authenticating user root 192.168.242.133 port 49142 [preauth]
+Nov 20 00:08:58 ol8-template sshd[50963]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:09:12 ol8-template sshd[53133]: Accepted publickey for root from 192.168.242.1 port 52640 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:09:12 ol8-template sshd[53133]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:09:12 ol8-template sshd[53133]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:09:20 ol8-template sshd[53203]: Accepted publickey for root from 192.168.242.1 port 52641 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:09:20 ol8-template sshd[53203]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:09:21 ol8-template sshd[53203]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:09:55 ol8-template sshd[53447]: Accepted publickey for root from 192.168.242.1 port 52645 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:09:55 ol8-template sshd[53447]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:09:56 ol8-template sshd[53447]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:09:56 ol8-template sshd[53473]: Accepted publickey for root from 192.168.242.1 port 52646 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:09:56 ol8-template sshd[53473]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:09:56 ol8-template sshd[53473]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:10:10 ol8-template sshd[53577]: Accepted publickey for root from 192.168.242.1 port 64490 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:10:10 ol8-template sshd[53577]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:10:11 ol8-template sshd[53577]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:10:11 ol8-template sshd[53603]: Accepted publickey for root from 192.168.242.1 port 64491 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:10:11 ol8-template sshd[53603]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:10:16 ol8-template sshd[53603]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:10:23 ol8-template sshd[53713]: Accepted publickey for root from 192.168.242.1 port 64496 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:10:23 ol8-template sshd[53713]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:10:24 ol8-template sshd[53742]: Accepted publickey for root from 192.168.242.132 port 60090 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 20 00:10:24 ol8-template sshd[53742]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:10:24 ol8-template sshd[53713]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:11:59 ol8-template sshd[53746]: Received disconnect from 192.168.242.132 port 60090:11: disconnected by user
+Nov 20 00:11:59 ol8-template sshd[53746]: Disconnected from user root 192.168.242.132 port 60090
+Nov 20 00:11:59 ol8-template sshd[53742]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:12:43 ol8-template sshd[54116]: Accepted publickey for root from 192.168.242.1 port 64491 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:12:43 ol8-template sshd[54116]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:12:43 ol8-template sshd[54116]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:12:51 ol8-template sshd[54181]: Accepted publickey for root from 192.168.242.1 port 64495 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:12:51 ol8-template sshd[54181]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:12:51 ol8-template sshd[54181]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:12:58 ol8-template sshd[54246]: Accepted publickey for root from 192.168.242.1 port 64496 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:12:58 ol8-template sshd[54246]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:12:59 ol8-template sshd[54275]: Accepted publickey for root from 192.168.242.132 port 33502 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 20 00:12:59 ol8-template sshd[54275]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:13:02 ol8-template sshd[54246]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:13:08 ol8-template sshd[54530]: Accepted publickey for root from 192.168.242.1 port 64510 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:13:08 ol8-template sshd[54530]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:13:08 ol8-template sshd[54530]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:13:15 ol8-template sshd[54586]: Accepted publickey for root from 192.168.242.1 port 64513 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:13:15 ol8-template sshd[54586]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:13:15 ol8-template sshd[54586]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:13:20 ol8-template sshd[54642]: Accepted publickey for root from 192.168.242.1 port 64515 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:13:20 ol8-template sshd[54642]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:13:20 ol8-template sshd[54642]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:13:54 ol8-template sshd[54860]: Accepted publickey for root from 192.168.242.1 port 64528 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:13:54 ol8-template sshd[54860]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:13:54 ol8-template sshd[54860]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:13:55 ol8-template sshd[54886]: Accepted publickey for root from 192.168.242.1 port 57456 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:13:55 ol8-template sshd[54886]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:14:01 ol8-template sshd[54285]: Received disconnect from 192.168.242.132 port 33502:11: disconnected by user
+Nov 20 00:14:01 ol8-template sshd[54285]: Disconnected from user root 192.168.242.132 port 33502
+Nov 20 00:14:01 ol8-template sshd[54275]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:14:01 ol8-template sshd[54971]: Accepted publickey for root from 192.168.242.132 port 51140 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 20 00:14:01 ol8-template sshd[54971]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:14:03 ol8-template sshd[54886]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:15:02 ol8-template sshd[54991]: Received disconnect from 192.168.242.132 port 51140:11: disconnected by user
+Nov 20 00:15:02 ol8-template sshd[54991]: Disconnected from user root 192.168.242.132 port 51140
+Nov 20 00:15:02 ol8-template sshd[54971]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:17:38 ol8-template sshd[56080]: Accepted publickey for root from 192.168.242.1 port 53963 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:17:38 ol8-template sshd[56080]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:17:38 ol8-template sshd[56080]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:18:06 ol8-template sshd[56283]: Accepted publickey for root from 192.168.242.1 port 62438 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:18:06 ol8-template sshd[56283]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:18:06 ol8-template sshd[56283]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:18:07 ol8-template sshd[56309]: Accepted publickey for root from 192.168.242.1 port 62439 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:18:07 ol8-template sshd[56309]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:18:11 ol8-template sshd[56309]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:21:10 ol8-template sshd[57474]: Accepted publickey for root from 192.168.242.1 port 54736 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:21:10 ol8-template sshd[57474]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:21:11 ol8-template sshd[57474]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:21:11 ol8-template sshd[57501]: Accepted publickey for root from 192.168.242.1 port 54737 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:21:11 ol8-template sshd[57501]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:21:13 ol8-template sshd[57501]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:21:20 ol8-template sshd[57580]: Accepted publickey for root from 192.168.242.1 port 54738 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:21:20 ol8-template sshd[57580]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:21:20 ol8-template sshd[57580]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:22:03 ol8-template sshd[57863]: Accepted publickey for root from 192.168.242.1 port 54748 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:22:03 ol8-template sshd[57863]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:22:03 ol8-template sshd[57863]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:22:04 ol8-template sshd[57902]: Accepted publickey for root from 192.168.242.1 port 54749 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:22:04 ol8-template sshd[57902]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:22:09 ol8-template sshd[57902]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:22:17 ol8-template sshd[58028]: Accepted publickey for root from 192.168.242.1 port 54753 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:22:17 ol8-template sshd[58028]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:22:21 ol8-template sshd[58028]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:22:27 ol8-template sshd[58157]: Accepted publickey for root from 192.168.242.1 port 54755 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:22:27 ol8-template sshd[58157]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:22:27 ol8-template sshd[58157]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:26:03 ol8-template sshd[59003]: Accepted publickey for root from 192.168.242.1 port 54777 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:26:03 ol8-template sshd[59003]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:26:03 ol8-template sshd[59003]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:26:04 ol8-template sshd[59049]: Accepted publickey for root from 192.168.242.1 port 54788 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:26:04 ol8-template sshd[59049]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:26:06 ol8-template sshd[59049]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:26:21 ol8-template sshd[59172]: Accepted publickey for root from 192.168.242.1 port 54811 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:26:21 ol8-template sshd[59172]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:26:21 ol8-template sshd[59172]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:26:22 ol8-template sshd[59198]: Accepted publickey for root from 192.168.242.1 port 54812 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:26:22 ol8-template sshd[59198]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:26:30 ol8-template sshd[59198]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:28:42 ol8-template sshd[60099]: Accepted publickey for root from 192.168.242.1 port 63783 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:29:51 ol8-template sshd[60099]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:30:06 ol8-template sshd[60213]: Accepted publickey for root from 192.168.242.1 port 57434 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:30:06 ol8-template sshd[60213]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:30:07 ol8-template sshd[60213]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:30:07 ol8-template sshd[60239]: Accepted publickey for root from 192.168.242.1 port 57435 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:30:07 ol8-template sshd[60239]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:30:11 ol8-template sshd[60239]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:35:52 ol8-template sshd[61547]: Accepted publickey for root from 192.168.242.1 port 57664 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:35:52 ol8-template sshd[61547]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:35:52 ol8-template sshd[61572]: Accepted publickey for root from 192.168.242.1 port 57668 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:35:52 ol8-template sshd[61572]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:35:52 ol8-template sshd[61547]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:35:52 ol8-template sshd[61572]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:35:53 ol8-template sshd[61593]: Accepted publickey for root from 192.168.242.1 port 57669 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:35:53 ol8-template sshd[61593]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:35:57 ol8-template sshd[61593]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:37:39 ol8-template sshd[61803]: Accepted publickey for root from 192.168.242.1 port 59797 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:37:39 ol8-template sshd[61803]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:37:39 ol8-template sshd[61803]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:37:48 ol8-template sshd[61895]: Accepted publickey for root from 192.168.242.1 port 59824 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:37:48 ol8-template sshd[61895]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:39:10 ol8-template sshd[61895]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:39:22 ol8-template sshd[62045]: Accepted publickey for root from 192.168.242.1 port 59867 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:39:22 ol8-template sshd[62045]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:39:25 ol8-template sshd[62045]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:39:59 ol8-template sshd[62434]: Accepted publickey for root from 192.168.242.1 port 62531 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:39:59 ol8-template sshd[62434]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:39:59 ol8-template sshd[62434]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:40:38 ol8-template sshd[62687]: Accepted publickey for root from 192.168.242.1 port 51423 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:40:38 ol8-template sshd[62687]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:40:38 ol8-template sshd[62687]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:42:12 ol8-template sshd[62849]: Accepted publickey for root from 192.168.242.1 port 51467 ssh2: RSA SHA256:J4xDznD13K4wO8QhsZLCSC3fMYlmf0FFrYlF/4GRa2Q
+Nov 20 00:43:30 ol8-template sshd[62849]: pam_systemd(sshd:session): Failed to create session: Connection timed out
+Nov 20 00:43:30 ol8-template sshd[62849]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:43:53 ol8-template sshd[63017]: error: kex_exchange_identification: Connection closed by remote host
+Nov 20 00:44:20 ol8-template sshd[63174]: Accepted password for root from 192.168.242.1 port 51513 ssh2
+Nov 20 00:44:20 ol8-template sshd[63174]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:44:20 ol8-template sshd[63174]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:44:28 ol8-template sshd[63243]: Accepted password for root from 192.168.242.1 port 51515 ssh2
+Nov 20 00:44:28 ol8-template sshd[63243]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:44:29 ol8-template sshd[63243]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:44:34 ol8-template sshd[63319]: Accepted password for root from 192.168.242.1 port 51522 ssh2
+Nov 20 00:44:34 ol8-template sshd[63319]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:44:34 ol8-template sshd[63319]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:44:41 ol8-template sshd[63396]: Accepted password for root from 192.168.242.1 port 51524 ssh2
+Nov 20 00:44:41 ol8-template sshd[63396]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:44:45 ol8-template sshd[63396]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:44:51 ol8-template sshd[63491]: Accepted password for root from 192.168.242.1 port 51525 ssh2
+Nov 20 00:44:51 ol8-template sshd[63491]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:44:51 ol8-template sshd[63491]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:44:59 ol8-template sshd[63560]: Accepted password for root from 192.168.242.1 port 51001 ssh2
+Nov 20 00:44:59 ol8-template sshd[63560]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:45:01 ol8-template sshd[63560]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:45:07 ol8-template sshd[63641]: Accepted password for root from 192.168.242.1 port 54739 ssh2
+Nov 20 00:45:07 ol8-template sshd[63641]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:45:08 ol8-template sshd[63641]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:45:30 ol8-template sshd[63801]: Accepted password for root from 192.168.242.1 port 54740 ssh2
+Nov 20 00:45:30 ol8-template sshd[63801]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:45:30 ol8-template sshd[63801]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:45:31 ol8-template sshd[63840]: Accepted password for root from 192.168.242.1 port 54741 ssh2
+Nov 20 00:45:31 ol8-template sshd[63840]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:45:33 ol8-template sshd[63840]: pam_unix(sshd:session): session closed for user root
+Nov 20 00:45:41 ol8-template sshd[63934]: Accepted password for root from 192.168.242.1 port 54756 ssh2
+Nov 20 00:45:41 ol8-template sshd[63934]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Nov 20 00:45:43 ol8-template sshd[64126]: Accepted publickey for root from 192.168.242.132 port 41504 ssh2: RSA SHA256:9pshjrJnXFJwwP1dhI1W89Z1g1y5lDuSZiTJ0p4aH6E
+Nov 20 00:45:43 ol8-template sshd[64126]: pam_unix(sshd:session): session opened for user root by (uid=0)

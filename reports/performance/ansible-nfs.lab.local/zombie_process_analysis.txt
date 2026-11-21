@@ -1,0 +1,22 @@
+==============================================================================
+LINUX ZOMBIE & DEFUNCT PROCESS ANALYSIS REPORT
+==============================================================================
+Target Host       : ansible-nfs.lab.local
+Distribution      : OracleLinux 8.10
+Timestamp         : 2026-11-19T22:03:34Z
+==============================================================================
+
+--- 1. ACTIVE ZOMBIE PROCESSES ---
+No zombie processes found.
+
+--- 2. PARENT PROCESSES OF ZOMBIE WORKERS ---
+Zero zombie parent processes detected.
+
+--- 3. SYSTEM PID & THREAD CAPACITY ---
+Current PIDs Active : 245
+Kernel PID Max      : 4194304
+Kernel Threads Max  : 13126
+
+--- 4. UNINTERRUPTIBLE SLEEP (D-STATE) PROCESSES ---
+No D-state I/O blocked processes found.
+==============================================================================

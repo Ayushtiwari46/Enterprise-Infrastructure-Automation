@@ -1,0 +1,13 @@
+d_state_process_count: '0'
+hostname: ansible-nfs.lab.local
+kernel: 5.15.0-206.153.7.1.el8uek.x86_64
+kernel_tainted_flag: '0'
+load_average:
+    15m: 0.11
+    1m: 0.25
+    5m: 0.14
+os_distribution: OracleLinux 8.10
+ram_utilization_percent: '89.2'
+swap_utilization_percent: '0.0'
+uptime: '00:14:02 up  5:00,  1 user,  load average: 0.25, 0.14, 0.11'
+zombie_process_count: '0'

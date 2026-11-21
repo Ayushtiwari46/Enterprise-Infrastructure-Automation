@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enterprise Infrastructure Operations Consolidated Summary</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 25px; background: #f8fafc; color: #1e293b; }
+    .header { background: #0f172a; color: white; padding: 25px; border-radius: 8px; margin-bottom: 25px; }
+    .header h1 { margin: 0 0 8px 0; font-size: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+    .card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+    .num { font-size: 32px; font-weight: 700; color: #2563eb; }
+    .label { font-size: 13px; color: #64748b; text-transform: uppercase; margin-top: 5px; }
+    .section { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    h2 { color: #0f172a; margin-top: 0; font-size: 18px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+    pre { background: #f1f5f9; padding: 15px; border-radius: 6px; font-size: 13px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Enterprise Infrastructure Operations Consolidated Summary</h1>
+    <p>Report Date: Fri Nov 20 03:34:59 IST 2026 | Controller: ansible-nfs.lab.local</p>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="num">2</div><div class="label">Health Checks</div></div>
+    <div class="card"><div class="num">2</div><div class="label">Config Audits</div></div>
+    <div class="card"><div class="num">4</div><div class="label">Incident Sessions</div></div>
+    <div class="card"><div class="num">2</div><div class="label">Validations</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Operations Summary Details</h2>
+    <pre>==============================================================================
+ENTERPRISE INFRASTRUCTURE OPERATIONS SUMMARY
+==============================================================================
+Generated: Fri Nov 20 03:34:59 IST 2026
+Controller: ansible-nfs.lab.local
+Repository: /root/Infrastructure-Automation
+
+1. OPERATIONS METRICS
+------------------------------------------------------------------------------
+Health Check Artifacts Captured : 2
+Configuration Audits Performed  : 2
+Incident Evidence Sessions Saved : 4
+Validation Run Artifacts        : 2
+
+2. HEALTH CHECK ARTIFACTS
+------------------------------------------------------------------------------
+/root/Infrastructure-Automation/reports/health-checks/ansible-nfs.lab.local/system_health.yml (373)
+/root/Infrastructure-Automation/reports/health-checks/olvm-engine.lab.local/olvm_engine_system_health.txt (7.2K)
+
+3. INCIDENT EVIDENCE SESSIONS
+------------------------------------------------------------------------------
+/root/Infrastructure-Automation/case-output
+/root/Infrastructure-Automation/case-output/INC0099999
+/root/Infrastructure-Automation/case-output/INC0099999/session_20261120_003922
+/root/Infrastructure-Automation/case-output/INC0099999/session_20261120_003923
+/root/Infrastructure-Automation/case-output/INC0099999/session_20261120_003924
+/root/Infrastructure-Automation/case-output/INC0012345
+/root/Infrastructure-Automation/case-output/INC0012345/session_session_test01
+==============================================================================</pre>
+  </div>
+
+</body>
+</html>

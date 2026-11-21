@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Incident Evidence Report - INC0012345</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+  .header { background: #1a365d; color: white; padding: 20px; border-radius: 6px; }
+  .card { background: white; padding: 20px; margin-top: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  h2 { color: #2b6cb0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { padding: 10px; border: 1px solid #cbd5e0; text-align: left; }
+  th { background: #edf2f7; color: #4a5568; }
+  .badge-pass { background: #48bb78; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Forensic Incident Evidence Dossier: INC0012345</h1>
+  <p>Customer Environment: LAB-TEST | Target: ansible-nfs.lab.local | Timestamp: session_test01</p>
+</div>
+<div class="card">
+  <h2>Collection Parameters</h2>
+  <table>
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td>Case Number</td><td>INC0012345</td></tr>
+    <tr><td>Collection Mode</td><td>MODE_1</td></tr>
+    <tr><td>Collection Profile</td><td>standard</td></tr>
+    <tr><td>Target Host</td><td>ansible-nfs.lab.local</td></tr>
+    <tr><td>Integrity Standard</td><td>SHA-256 Tamper-Evident Hashing Enabled</td></tr>
+    <tr><td>Evidence Status</td><td><span class="badge-pass">ACQUIRED & VERIFIED</span></td></tr>
+  </table>
+</div>
+<div class="card">
+  <h2>Evidence Vault Location</h2>
+  <p><strong>Path on Controller:</strong> <code>/root/Infrastructure-Automation/incident-collection/linux/../../case-output/INC0012345/session_session_test01/</code></p>
+  <p>Contains: system-logs, sar-telemetry, kernel-hardware, networking-processes, and cryptographic manifests.</p>
+</div>
+</body>
+</html>

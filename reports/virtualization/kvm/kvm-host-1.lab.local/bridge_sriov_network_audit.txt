@@ -1,0 +1,59 @@
+==============================================================================
+KVM LINUX BRIDGES, TAP DEVICES & SR-IOV AUDIT REPORT
+==============================================================================
+Hypervisor Host   : kvm-host-1.lab.local
+Distribution      : OracleLinux 8.10
+Timestamp         : 2026-11-19T22:04:43Z
+==============================================================================
+
+--- 1. LINUX BRIDGES & PORT MEMBERSHIP ---
+=== BRIDGE LINKS ===
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 master ovirtmgmt state forwarding priority 32 cost 100 
+
+=== BRIDGE FDB (FORWARDING DATABASE) ===
+00:50:56:ee:dd:ea dev ens160 master ovirtmgmt 
+00:0c:29:b2:71:f2 dev ens160 master ovirtmgmt 
+00:0c:29:86:de:af dev ens160 master ovirtmgmt 
+00:0c:29:e4:12:d2 dev ens160 master ovirtmgmt 
+00:50:56:c0:00:08 dev ens160 master ovirtmgmt 
+00:0c:29:bd:a8:4d dev ens160 vlan 1 master ovirtmgmt permanent
+00:0c:29:bd:a8:4d dev ens160 master ovirtmgmt permanent
+01:80:c2:00:00:0e dev ens160 self permanent
+01:80:c2:00:00:00 dev ens160 self permanent
+01:80:c2:00:00:03 dev ens160 self permanent
+01:00:5e:00:00:01 dev ens160 self permanent
+33:33:00:00:00:01 dev ens160 self permanent
+33:33:00:00:00:01 dev ovs-system self permanent
+01:80:c2:00:00:0e dev ovs-system self permanent
+01:80:c2:00:00:00 dev ovs-system self permanent
+01:80:c2:00:00:03 dev ovs-system self permanent
+33:33:00:00:00:01 dev genev_sys_6081 self permanent
+01:00:5e:00:00:01 dev genev_sys_6081 self permanent
+33:33:ff:41:6d:2a dev genev_sys_6081 self permanent
+01:80:c2:00:00:0e dev genev_sys_6081 self permanent
+01:80:c2:00:00:00 dev genev_sys_6081 self permanent
+01:80:c2:00:00:03 dev genev_sys_6081 self permanent
+01:80:c2:00:00:0e dev br-int self permanent
+01:80:c2:00:00:00 dev br-int self permanent
+01:80:c2:00:00:03 dev br-int self permanent
+01:00:5e:00:00:01 dev br-int self permanent
+33:33:00:00:00:01 dev br-int self permanent
+33:33:00:00:00:01 dev ovirtmgmt self permanent
+01:00:5e:00:00:6a dev ovirtmgmt self permanent
+33:33:00:00:00:6a dev ovirtmgmt self permanent
+01:00:5e:00:00:01 dev ovirtmgmt self permanent
+33:33:ff:bd:a8:4d dev ovirtmgmt self permanent
+33:33:00:00:00:01 dev ;vdsmdummy; self permanent
+ea:12:53:8e:3f:32 dev ;vdsmdummy; vlan 1 master ;vdsmdummy; permanent
+
+--- 2. VIRTUAL TAP / VNET INTERFACES ---
+
+=== TAP INTERFACES ===
+No active tap/vnet interfaces
+
+--- 3. PACKET DROPS ON VIRTUAL BRIDGES & TAPS ---
+Zero packet drops observed on virtual interfaces.
+
+--- 4. SR-IOV & PHYSICAL NETWORK ADAPTERS ---
+03:00.0 Ethernet controller [0200]: VMware VMXNET3 Ethernet Controller [15ad:07b0] (rev 01)
+==============================================================================

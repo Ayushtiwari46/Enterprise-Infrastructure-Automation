@@ -1,0 +1,50 @@
+==============================================================================
+OLVM / OVIRT ENGINE SYSTEM HEALTH AUDIT
+==============================================================================
+Target Host       : olvm-engine.lab.local
+Distribution      : OracleLinux 8.10
+Timestamp         : 2026-11-19T22:04:29Z
+==============================================================================
+
+--- 1. OVIRT-ENGINE SERVICE STATUS ---
+● ovirt-engine.service - oVirt Engine
+   Loaded: loaded (/usr/lib/systemd/system/ovirt-engine.service; enabled; vendor preset: disabled)
+   Active: active (running) since Thu 2026-11-19 21:33:58 IST; 6h ago
+ Main PID: 54757 (ovirt-engine.py)
+    Tasks: 204 (limit: 48734)
+   Memory: 1.9G
+   CGroup: /system.slice/ovirt-engine.service
+           ├─54757 /usr/libexec/platform-python /usr/share/ovirt-engine/services/ovirt-engine/ovirt-engine.py --redirect-output --systemd=notify start
+           └─54801 ovirt-engine --add-modules java.se -server -XX:+TieredCompilation -Xms1913M -Xmx1913M -Xss1M -Djava.awt.headless=true -Dsun.rmi.dgc.client.gcInterval=3600000 -Dsun.rmi.dgc.server.gcInterval=3600000 -Djsse.enableSNIExtension=false -Dresteasy.preferJacksonOverJsonB=true -Djackson.deserialization.whitelist.packages=org,com,java,javax -Dcom.redhat.fips=false -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/ovirt-engine/dump -Djava.util.logging.manager=org.jboss.logmanager -Dlogging.configuration=file:///var/lib/ovirt-engine/jboss_runtime/config/ovirt-engine-logging.properties -Dorg.jboss.resolver.warning=true -Djboss.modules.system.pkgs=org.jboss.byteman -Djboss.server.default.config=ovirt-engine -Djboss.home.dir=/usr/share/ovirt-engine-wildfly -Djboss.server.base.dir=/usr/share/ovirt-engine -Djboss.server.data.dir=/var/lib/ovirt-engine -Djboss.server.log.dir=/var/log/ovirt-engine -Djboss.server.config.dir=/var/lib/ovirt-engine/jboss_runtime/config -Djboss.server.temp.dir=/var/lib/ovirt-engine/jboss_runtime/tmp -Djboss.controller.temp.dir=/var/lib/ovirt-engine/jboss_runtime/tmp -jar /usr/share/ovirt-engine-wildfly/jboss-modules.jar -mp /usr/share/ovirt-engine-wildfly-overlay/modules:/usr/share/ovirt-engine/modules/common:/usr/share/ovirt-engine-extension-aaa-jdbc/modules:/usr/share/ovirt-engine-wildfly/modules -jaxpmodule javax.xml.jaxp-provider org.jboss.as.standalone -c ovirt-engine.xml
+
+Nov 19 21:33:58 olvm-engine.lab.local systemd[1]: ovirt-engine.service: Succeeded.
+Nov 19 21:33:58 olvm-engine.lab.local systemd[1]: Stopped oVirt Engine.
+Nov 19 21:33:58 olvm-engine.lab.local systemd[1]: Starting oVirt Engine...
+Nov 19 21:33:58 olvm-engine.lab.local systemd[1]: Started oVirt Engine.
+Nov 19 21:33:58 olvm-engine.lab.local ovirt-engine.py[54757]: 2026-11-19 21:33:58,850+0530 ovirt-engine: INFO _detectJBossVersion:186 Detecting JBoss version. Running: /usr/lib/jvm/java-11/bin/java ['ovirt-engine-version', '--add-modules', 'java.se', '-server', '-XX:+TieredCompilation', '-Xms1913M', '-Xmx1913M', '-Xss1M', '-Djava.awt.headless=true', '-Dsun.rmi.dgc.client.gcInterval=3600000', '-Dsun.rmi.dgc.server.gcInterval=3600000', '-Djsse.enableSNIExtension=false', '-Dresteasy.preferJacksonOverJsonB=true', '-Djackson.deserialization.whitelist.packages=org,com,java,javax', '-Dcom.redhat.fips=false', '-XX:+HeapDumpOnOutOfMemoryError', '-XX:HeapDumpPath=/var/log/ovirt-engine/dump', '-Djava.util.logging.manager=org.jboss.logmanager', '-Dlogging.configuration=file:///var/lib/ovirt-engine/jboss_runtime/config/ovirt-engine-logging.properties', '-Dorg.jboss.resolver.warning=true', '-Djboss.modules.system.pkgs=org.jboss.byteman', '-Djboss.server.default.config=ovirt-engine', '-Djboss.home.dir=/usr/share/ovirt-engine-wildfly', '-Djboss.server.base.dir=/usr/share/ovirt-engine', '-Djboss.server.data.dir=/var/lib/ovirt-engine', '-Djboss.server.log.dir=/var/log/ovirt-engine', '-Djboss.server.config.dir=/var/lib/ovirt-engine/jboss_runtime/config', '-Djboss.server.temp.dir=/var/lib/ovirt-engine/jboss_runtime/tmp', '-Djboss.controller.temp.dir=/var/lib/ovirt-engine/jboss_runtime/tmp', '-jar', '/usr/share/ovirt-engine-wildfly/jboss-modules.jar', '-mp', '/usr/share/ovirt-engine-wildfly-overlay/modules:/usr/share/ovirt-engine/modules/common:/usr/share/ovirt-engine-extension-aaa-jdbc/modules:/usr/share/ovirt-engine-wildfly/modules', '-jaxpmodule', 'javax.xml.jaxp-provider', 'org.jboss.as.standalone', '-v']
+Nov 19 21:33:59 olvm-engine.lab.local ovirt-engine.py[54757]: 2026-11-19 21:33:59,546+0530 ovirt-engine: INFO _detectJBossVersion:206 Return code: 0,  | stdout: '['WildFly Full 23.0.2.Final (WildFly Core 15.0.1.Final)'],  | stderr: '['WARNING: -jaxpmodule is deprecated and may be removed in a future release']'
+
+--- 2. AUXILIARY ENGINE SERVICES ---
+active
+inactive
+active
+
+--- 3. ENGINE DATABASE HEALTH ---
+ count 
+-------
+     1
+(1 row)
+
+--- 4. ENGINE JVM PROCESS RESOURCE ALLOCATION ---
+ovirt      43452  0.0  0.3 136116 24020 ovirt-fence-kdu /usr/libexec/platform-python /usr/share/ovirt-engine/services/ovirt-fence-kdump-listener/ovirt-fence-kdump-listener.py --systemd=notify start
+
+--- 5. RECENT ENGINE.LOG EXCEPTION SCAN ---
+2026-11-20 01:14:59,669+05 ERROR [org.ovirt.vdsm.jsonrpc.client.reactors.ReactorClient] (SSL Stomp Reactor) [] Connection timeout for host '192.168.242.134', last response arrived 2182 ms ago.
+2026-11-20 01:14:59,670+05 ERROR [org.ovirt.vdsm.jsonrpc.client.reactors.ReactorClient] (SSL Stomp Reactor) [] Connection timeout for host '192.168.242.135', last response arrived 2003 ms ago.
+2026-11-20 01:15:10,091+05 ERROR [org.ovirt.vdsm.jsonrpc.client.reactors.ReactorClient] (SSL Stomp Reactor) [] Connection timeout for host '192.168.242.135', last response arrived 2386 ms ago.
+2026-11-20 01:15:10,091+05 ERROR [org.ovirt.vdsm.jsonrpc.client.reactors.ReactorClient] (SSL Stomp Reactor) [] Connection timeout for host '192.168.242.134', last response arrived 2002 ms ago.
+2026-11-20 01:15:10,094+05 ERROR [org.ovirt.engine.core.dal.dbbroker.auditloghandling.AuditLogDirector] (EE-ManagedScheduledExecutorService-engineScheduledThreadPool-Thread-77) [] EVENT_ID: VDS_BROKER_COMMAND_FAILURE(10,802), VDSM kvm-host-2 command Get Host Statistics failed: Connection timeout for host '192.168.242.135', last response arrived 2386 ms ago.
+2026-11-20 01:15:10,094+05 ERROR [org.ovirt.engine.core.vdsbroker.monitoring.HostMonitoring] (EE-ManagedScheduledExecutorService-engineScheduledThreadPool-Thread-77) [] Unable to GetStats: VDSNetworkException: VDSGenericException: VDSNetworkException: Connection timeout for host '192.168.242.135', last response arrived 2386 ms ago.
+2026-11-20 01:15:13,150+05 ERROR [org.ovirt.engine.core.vdsbroker.monitoring.HostMonitoring] (EE-ManagedScheduledExecutorService-engineScheduledThreadPool-Thread-5) [] Unable to GetStats: NoRouteToHostException: No route to host
+2026-11-20 01:15:13,151+05 ERROR [org.ovirt.engine.core.vdsbroker.vdsbroker.GetStatsAsyncVDSCommand] (EE-ManagedScheduledExecutorService-engineScheduledThreadPool-Thread-5) [] Command 'GetStatsAsyncVDSCommand(HostName = kvm-host-1, VdsIdAndVdsVDSCommandParametersBase:{hostId='9654ea04-23f5-4f96-ac39-673718a4ed78', vds='Host[kvm-host-1,9654ea04-23f5-4f96-ac39-673718a4ed78]'})' execution failed: java.net.NoRouteToHostException: No route to host
+==============================================================================

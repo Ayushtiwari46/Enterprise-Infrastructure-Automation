@@ -1,0 +1,19 @@
+=== UPTIME & TIMEZONE ===
+               Local time: Fri 2026-11-20 00:45:44 IST
+           Universal time: Thu 2026-11-19 19:15:44 UTC
+                 RTC time: Thu 2026-11-19 19:15:44
+                Time zone: Asia/Kolkata (IST, +0530)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+
+=== REBOOT HISTORY ===
+reboot   system boot  5.15.0-206.153.7 Thu Nov 19 19:13   still running
+reboot   system boot  5.15.0-206.153.7 Thu Nov 19 19:10 - 19:11  (00:00)
+
+wtmp begins Thu Nov 19 19:10:52 2026
+
+=== SHUTDOWN HISTORY ===
+shutdown system down  5.15.0-206.153.7 Thu Nov 19 19:11 - 19:13  (00:01)
+
+wtmp begins Thu Nov 19 19:10:52 2026

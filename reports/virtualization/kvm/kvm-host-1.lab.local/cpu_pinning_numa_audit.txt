@@ -1,0 +1,120 @@
+==============================================================================
+KVM VCPU PINNING & NUMA TOPOLOGY AUDIT REPORT
+==============================================================================
+Hypervisor Host   : kvm-host-1.lab.local
+Distribution      : OracleLinux 8.10
+Timestamp         : 2026-11-19T22:04:43Z
+==============================================================================
+
+--- 1. PHYSICAL HOST NUMA TOPOLOGY ---
+available: 1 nodes (0)
+node 0 cpus: 0 1
+node 0 size: 5638 MB
+node 0 free: 4130 MB
+node distances:
+node   0 
+  0:  10 
+
+--- 2. NUMA MEMORY HIT / MISS RATIOS ---
+
+Per-node numastat info (in MBs):
+                Node 0 Total
+                ------ -----
+Numa_Hit         19695 19695
+Numa_Miss            0     0
+Numa_Foreign         0     0
+Interleave_Hit      10    10
+Local_Node       19695 19695
+Other_Node           0     0
+
+--- 3. PER-VM VCPU PINNING & NUMATUNE AFFINITIES ---
+==================================================
+VM: Please vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: enter vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: your vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: authentication vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: name: vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: Please vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: enter vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: your vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+==================================================
+VM: password: vCPU PINNING MAPPING
+==================================================
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+
+--- NUMA Tuning (virsh numatune) ---
+Please enter your authentication name: Please enter your password: error: failed to connect to the hypervisor
+error: authentication failed: Failed to start SASL negotiation: -1 (SASL(-1): generic failure: All-whitespace username.)
+==============================================================================

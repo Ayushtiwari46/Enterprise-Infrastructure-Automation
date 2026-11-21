@@ -1,0 +1,11 @@
+==============================================================================
+SERVICENOW INCIDENT EVIDENCE INTAKE RECORD
+==============================================================================
+ServiceNow Case Number : INC0012345
+Customer / Environment : LAB-TEST
+Collection Mode        : MODE_1
+Collection Profile     : standard
+Acquisition Timestamp  : session_test01
+Target Node            : ansible-nfs.lab.local
+Time Window Scope      : Last 3 Days
+==============================================================================

@@ -1,0 +1,65 @@
+==============================================================================
+ENTERPRISE INFRASTRUCTURE INVENTORY VALIDATION REPORT
+==============================================================================
+Inventory Path : /root/Infrastructure-Automation/inventories/lab/hosts.yml
+Target Scope   : linux_all
+Audit Time     : Fri Nov 20 00:46:42 IST 2026
+Controller     : ansible-nfs.lab.local
+==============================================================================
+
+--- 1. INVENTORY STRUCTURE AUDIT ---
+@all:
+  |--@ungrouped:
+  |--@linux_all:
+  |  |--@oracle_linux:
+  |  |  |--ansible-nfs.lab.local
+  |  |  |--olvm-engine.lab.local
+  |  |  |--kvm-host-1.lab.local
+  |  |  |--kvm-host-2.lab.local
+  |--@control_nodes:
+  |  |--ansible-nfs.lab.local
+  |--@nfs_storage_servers:
+  |  |--ansible-nfs.lab.local
+  |--@virtualization_managers:
+  |  |--olvm-engine.lab.local
+  |--@kvm_hypervisors:
+  |  |--kvm-host-1.lab.local
+  |  |--kvm-host-2.lab.local
+  |--@mock_targets:
+  |  |--@mock_aix:
+  |  |  |--mock-aix-p9-01.lab.local
+  |  |--@mock_windows:
+  |  |  |--mock-win-srv2022.lab.local
+  |  |--@mock_vmware:
+  |  |  |--mock-vcenter7.lab.local
+  |  |--@mock_storage:
+  |  |  |--mock-ibm-flashsystem.lab.local
+  |  |  |--mock-hpe-primera.lab.local
+  |  |  |--mock-dell-powerstore.lab.local
+  |  |--@mock_san:
+  |  |  |--mock-brocade-switch.lab.local
+  |  |  |--mock-cisco-mds.lab.local
+
+--- 2. HOST CONNECTIVITY PING VERIFICATION ---
+ansible-nfs.lab.local | SUCCESS => {"changed": false,"ping": "pong"}
+kvm-host-1.lab.local | SUCCESS => {"changed": false,"ping": "pong"}
+olvm-engine.lab.local | SUCCESS => {"changed": false,"ping": "pong"}
+kvm-host-2.lab.local | SUCCESS => {"changed": false,"ping": "pong"}
+
+--- 3. OPERATING SYSTEM DISTRIBUTION SUMMARY ---
+ansible-nfs.lab.local | SUCCESS => {
+        "ansible_distribution": "OracleLinux",
+        "ansible_distribution_version": "8.10"
+kvm-host-2.lab.local | SUCCESS => {
+        "ansible_distribution": "OracleLinux",
+        "ansible_distribution_version": "8.10"
+olvm-engine.lab.local | SUCCESS => {
+        "ansible_distribution": "OracleLinux",
+        "ansible_distribution_version": "8.10"
+kvm-host-1.lab.local | SUCCESS => {
+        "ansible_distribution": "OracleLinux",
+        "ansible_distribution_version": "8.10"
+
+==============================================================================
+Validation complete. Status captured in /root/Infrastructure-Automation/reports/validation/inventory_validation_20261120_004642.txt
+==============================================================================

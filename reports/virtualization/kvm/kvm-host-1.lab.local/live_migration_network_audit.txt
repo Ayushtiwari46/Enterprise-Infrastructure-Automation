@@ -1,0 +1,46 @@
+==============================================================================
+KVM LIVE MIGRATION NETWORK & TLS ENCRYPTION AUDIT
+==============================================================================
+Hypervisor Host   : kvm-host-1.lab.local
+Distribution      : OracleLinux 8.10
+Timestamp         : 2026-11-19T22:04:43Z
+==============================================================================
+
+--- 1. LIBVIRTD LISTENING & MIGRATION PORTS ---
+tcp   LISTEN 0      1000               *:16514            *:*    users:(("libvirtd",pid=1384,fd=6),("systemd",pid=1,fd=37))
+
+--- 2. ACTIVE /etc/libvirt/libvirtd.conf DIRECTIVES ---
+unix_sock_group = "kvm"
+unix_sock_rw_perms = "0770"
+auth_unix_rw="sasl"
+ca_file="/etc/pki/vdsm/certs/cacert.pem"
+cert_file="/etc/pki/vdsm/certs/vdsmcert.pem"
+host_uuid="a7858ac6-e5a7-44e9-9798-6ee45372bc7b"
+keepalive_interval=-1
+key_file="/etc/pki/vdsm/keys/vdsmkey.pem"
+
+--- 3. PKI TLS CERTIFICATE AUDIT ---
+=== CA CERTIFICATE ===
+total 4
+drwxr-xr-x.  2 vdsm kvm    24 Nov 19 21:03 .
+drwxr-xr-x. 13 root root  160 Nov 19 21:03 ..
+-rw-r--r--.  1 root kvm  1359 Nov 19 21:03 cacert.pem
+
+=== SERVER CERTIFICATE ===
+total 8
+drwxr-xr-x.  3 vdsm kvm    43 Nov 19 21:03 .
+drwxr-xr-x. 13 root root  160 Nov 19 21:03 ..
+-rw-r--r--.  1 root kvm  5189 Nov 19 21:03 clientcert.pem
+drwxr-xr-x.  2 vdsm kvm    27 Nov 19 21:03 private
+
+=== CLIENT CERTIFICATE ===
+
+--- 4. INTERFACE MTU SIZES ---
+lo : MTU 65536
+ens160 : MTU 1500
+ovs-system : MTU 1500
+genev_sys_6081 : MTU 65000
+br-int : MTU 1500
+ovirtmgmt : MTU 1500
+;vdsmdummy; : MTU 1500
+==============================================================================
