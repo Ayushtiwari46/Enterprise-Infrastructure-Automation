@@ -31,6 +31,7 @@ Infrastructure-Automation/
 |-- playbooks/                   # 55+ production-grade operational playbooks
 |-- incident-collection/         # Forensic incident evidence engines
 |-- operations/                  # Segregated operational activities (Health, Audit, Changes)
+|-- Oncall_Checks/               # On-call triage runbooks & diagnostics (automation roadmap)
 |-- roles/                       # Reusable infrastructure roles
 |-- vars/                        # Central variable hierarchy
 |-- scripts/                     # Shell wrappers & automation intake CLI
